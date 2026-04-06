@@ -92,6 +92,7 @@ export function createCTAOverlay(width, height) {
     lbl.anchor.set(0.5, 1);
     lbl.x = x + btnW / 2;
     lbl.y = y + btnH / 2 + 2;
+    lbl.eventMode = 'none';
     container.addChild(lbl);
 
     const sub2 = new Text({
@@ -104,6 +105,7 @@ export function createCTAOverlay(width, height) {
       },
     });
     sub2.anchor.set(0.5, 0);
+    sub2.eventMode = 'none';
     sub2.x = x + btnW / 2;
     sub2.y = y + btnH / 2 + 4;
     container.addChild(sub2);
@@ -111,22 +113,21 @@ export function createCTAOverlay(width, height) {
     return btn;
   }
 
-  const iosBtn = makeStoreBtn(iosX, btnY, 'Download on the', 'App Store', 0x111111, IOS_URL);
-  const androidBtn = makeStoreBtn(androidX, btnY, 'Get it on', 'Google Play', 0x1a6b1a, ANDROID_URL);
+  makeStoreBtn(iosX, btnY, 'Download on the', 'App Store', 0x111111, IOS_URL);
+  makeStoreBtn(androidX, btnY, 'Get it on', 'Google Play', 0x1a6b1a, ANDROID_URL);
 
-  // Pulsing animation for both buttons
-  let scale = 1;
-  let growing = true;
+  // Subtle alpha pulse on the title (no scale → no shifting buttons)
+  let alpha = 1;
+  let growing = false;
   container._animateCTA = () => {
     if (growing) {
-      scale += 0.002;
-      if (scale >= 1.06) growing = false;
+      alpha += 0.01;
+      if (alpha >= 1.0) growing = false;
     } else {
-      scale -= 0.002;
-      if (scale <= 1.0) growing = true;
+      alpha -= 0.01;
+      if (alpha <= 0.6) growing = true;
     }
-    iosBtn.scale.set(scale);
-    androidBtn.scale.set(scale);
+    title.alpha = alpha;
   };
 
   return container;

@@ -6,6 +6,7 @@
 import { Application, Sprite, NineSliceSprite, Assets, Container, Graphics, Text } from 'pixi.js';
 import { initDevtools } from '@pixi/devtools';
 import bgImageUrl from '../res/common/img_bg.webp?url';
+import iconDummyUrl from '../Logo/iconDummy.png?url';
 import imgHandUrl from '../res/style-1/img_hand.webp?url';
 import imgHeaderUrl from '../res/style-1/img_header.webp?url';
 import slotWhiteUrl from '../res/style-1/slot_white.webp?url';
@@ -233,7 +234,7 @@ async function startGame() {
   app.stage.addChild(bar);
 
   // --- Store buttons footer (App Store + Google Play) ---
-  const footerBtns = createFooterButtons(GAME_WIDTH, GAME_HEIGHT);
+  const footerBtns = await createFooterButtons(GAME_WIDTH, GAME_HEIGHT);
   app.stage.addChild(footerBtns);
 
   // --- CTA Overlay ---
@@ -323,20 +324,51 @@ async function createHandAnimation(app, cardA, cardB) {
   return hand;
 }
 
-function createFooterButtons(gameWidth, gameHeight) {
+async function createFooterButtons(gameWidth, gameHeight) {
   const container = new Container();
-  const btnW = gameWidth * 0.42;
-  const btnH = 52;
-  const gap = gameWidth * 0.04;
-  const totalW = btnW * 2 + gap;
-  const startX = (gameWidth - totalW) / 2;
-  const btnY = gameHeight - btnH - 18;
+
+  // Footer layout (NOT full width):
+  //   [Icon]   [App Store btn] [Google Play btn]
+  //            [    Search pill (= 2 btns wide)    ]
+
+  const iconSize = 92;
+  const btnH = 50;
+  const btnGap = 10;
+  const btnW = 145;
+  const totalRightW = btnW * 2 + btnGap;
+  const iconGap = 12;
+  const totalContentW = iconSize + iconGap + totalRightW;
+  const startX = (gameWidth - totalContentW) / 2;
+
+  const pillH = 36;
+  const innerGap = 8;
+  // Footer block height = icon (top-aligned with btn row, ends at pill bottom)
+  // btn row + gap + pill
+  const blockH = btnH + innerGap + pillH;
+  const blockY = gameHeight - blockH - 18;
+
+  const iconX = startX;
+  const iconY = blockY + (blockH - iconSize) / 2;
+
+  // App icon
+  try {
+    const iconTex = await Assets.load(iconDummyUrl);
+    const icon = new Sprite(iconTex);
+    icon.width = iconSize;
+    icon.height = iconSize;
+    icon.x = iconX;
+    icon.y = iconY;
+    container.addChild(icon);
+  } catch (_) { /* icon optional */ }
+
+  const rightStartX = iconX + iconSize + iconGap;
+  const btnY = blockY;
 
   function makeBtn(x, label1, label2, color, url) {
     const bg = new Graphics();
     bg.roundRect(x, btnY, btnW, btnH, 10);
     bg.fill({ color });
-    bg.stroke({ color: 0xffffff, width: 1.5, alpha: 0.5 });
+    bg.stroke({ color: 0xffffff, width: 1.5, alpha: 0.6 });
     bg.eventMode = 'static';
     bg.cursor = 'pointer';
     bg.on('pointerdown', () => openUrl(url));
@@ -349,6 +381,7 @@ function createFooterButtons(gameWidth, gameHeight) {
     t1.anchor.set(0.5, 1);
     t1.x = x + btnW / 2;
     t1.y = btnY + btnH / 2 + 1;
+    t1.eventMode = 'none';
     container.addChild(t1);
 
     const t2 = new Text({
@@ -357,14 +390,68 @@ function createFooterButtons(gameWidth, gameHeight) {
     });
     t2.anchor.set(0.5, 0);
     t2.x = x + btnW / 2;
-    t2.y = btnY + btnH / 2 + 3;
+    t2.y = btnY + btnH / 2 + 2;
+    t2.eventMode = 'none';
     container.addChild(t2);
   }
 
-  makeBtn(startX, 'Download on the', 'App Store', 0x111111,
+  makeBtn(rightStartX, 'Download on the', 'App Store', 0x111111,
     'https://apps.apple.com/app/dummy-zingplay/id6737778971');
-  makeBtn(startX + btnW + gap, 'Get it on', 'Google Play', 0x1a6b1a,
+  makeBtn(rightStartX + btnW + btnGap, 'Get it on', 'Google Play', 0x1a6b1a,
     'https://play.google.com/store/apps/details?id=th.dm.card.casino');
+
+  // Bottom row: search pill — width = 2 buttons + gap
+  const pillY = btnY + btnH + innerGap;
+  const pillW = totalRightW;
+
+  // White pill background
+  const pillBg = new Graphics();
+  pillBg.roundRect(rightStartX, pillY, pillW, pillH, pillH / 2);
+  pillBg.fill({ color: 0xffffff });
+  pillBg.stroke({ color: 0xCC1010, width: 2 });
+  pillBg.eventMode = 'static';
+  pillBg.cursor = 'pointer';
+  pillBg.on('pointerdown', () => openUrl(STORE_URL));
+  container.addChild(pillBg);
+
+  // Game name text
+  const nameText = new Text({
+    text: 'Dummy ZingPlay',
+    style: {
+      fontFamily: 'Arial Black, Arial',
+      fontSize: 16,
+      fontWeight: 'bold',
+      fill: '#CC1010',
+    },
+  });
+  nameText.anchor.set(0, 0.5);
+  nameText.x = rightStartX + 16;
+  nameText.y = pillY + pillH / 2;
+  nameText.eventMode = 'none';
+  container.addChild(nameText);
+
+  // Red search circle on the right
+  const searchR = pillH / 2;
+  const searchCx = rightStartX + pillW - searchR;
+  const searchCy = pillY + pillH / 2;
+  const searchBg = new Graphics();
+  searchBg.circle(searchCx, searchCy, searchR);
+  searchBg.fill({ color: 0xCC1010 });
+  searchBg.eventMode = 'static';
+  searchBg.cursor = 'pointer';
+  searchBg.on('pointerdown', () => openUrl(STORE_URL));
+  container.addChild(searchBg);
+
+  // Search icon (magnifying glass) drawn with Graphics
+  const glass = new Graphics();
+  const cx = searchCx - 2;
+  const cy = searchCy - 2;
+  glass.circle(cx, cy, 6);
+  glass.stroke({ color: 0xffffff, width: 2 });
+  glass.moveTo(cx + 4, cy + 4);
+  glass.lineTo(cx + 9, cy + 9);
+  glass.stroke({ color: 0xffffff, width: 2.5, cap: 'round' });
+  container.addChild(glass);
 
   return container;
 }
@@ -380,4 +467,17 @@ function fitToScreen(app, container) {
   app.canvas.style.display = 'block';
 }
 
-startGame().catch(console.error);
+// MRAID-aware boot: wait for ad container ready before starting the game
+function bootWhenReady() {
+  if (typeof mraid === 'undefined') {
+    // No MRAID (dev / web preview) — start immediately
+    startGame().catch(console.error);
+    return;
+  }
+  if (mraid.getState && mraid.getState() === 'loading') {
+    mraid.addEventListener('ready', () => startGame().catch(console.error));
+  } else {
+    startGame().catch(console.error);
+  }
+}
+bootWhenReady();
