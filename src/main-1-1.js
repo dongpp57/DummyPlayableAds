@@ -368,10 +368,13 @@ function createFooterButtons(gameWidth, gameHeight) {
 }
 
 function fitToScreen(app, container) {
-  const scale = Math.min(window.innerWidth / GAME_WIDTH, window.innerHeight / GAME_HEIGHT);
-  app.canvas.style.width = `${GAME_WIDTH * scale}px`;
-  app.canvas.style.height = `${GAME_HEIGHT * scale}px`;
-  app.canvas.style.margin = 'auto';
+  const vw = window.innerWidth || document.documentElement.clientWidth;
+  const vh = window.innerHeight || document.documentElement.clientHeight;
+  const scale = Math.min(vw / GAME_WIDTH, vh / GAME_HEIGHT);
+  const w = Math.floor(GAME_WIDTH * scale);
+  const h = Math.floor(GAME_HEIGHT * scale);
+  app.canvas.style.width = `${w}px`;
+  app.canvas.style.height = `${h}px`;
   app.canvas.style.display = 'block';
 }
 
