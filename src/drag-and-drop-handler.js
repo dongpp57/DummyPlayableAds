@@ -41,6 +41,13 @@ export function initDragAndDrop(cards, slots, onSwap) {
     stage.on('pointerup', onDragEnd);
     stage.on('pointerupoutside', onDragEnd);
   }
+
+  // Prevent native scroll/swipe-back when dragging cards
+  const canvas = stage?.app?.canvas || document.querySelector('canvas');
+  if (canvas) {
+    canvas.addEventListener('touchstart', (e) => e.preventDefault(), { passive: false });
+    canvas.addEventListener('touchmove', (e) => e.preventDefault(), { passive: false });
+  }
 }
 
 function getSlotPos(slot) {

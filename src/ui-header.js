@@ -3,6 +3,7 @@
  * Sized for 640x1136 canvas, styled per preview_2.png
  */
 import { Container, Graphics, Text, Sprite, NineSliceSprite, Assets } from 'pixi.js';
+import { openUrl } from './open-store.js';
 import imgProcess0Url from '../res/common/img_process_0.webp?url';
 import imgProcess1Url from '../res/common/img_process_1.webp?url';
 import imgProcess2Url from '../res/common/img_process_2.webp?url';
@@ -55,7 +56,7 @@ export async function createTopBar(width) {
   btn.eventMode = 'static';
   btn.cursor = 'pointer';
   btn.on('pointerdown', () => {
-    window.open(container._storeUrl || '#', '_blank');
+    openUrl(container._storeUrl || '#');
   });
   container.addChild(btn);
 
@@ -75,7 +76,7 @@ export async function createTopBar(width) {
   btnText.eventMode = 'static';
   btnText.cursor = 'pointer';
   btnText.on('pointerdown', () => {
-    window.open(container._storeUrl || '#', '_blank');
+    openUrl(container._storeUrl || '#');
   });
   container.addChild(btnText);
 

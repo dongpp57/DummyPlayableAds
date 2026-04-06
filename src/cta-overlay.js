@@ -3,6 +3,7 @@
  * "Time's Up!" with App Store + Google Play download buttons
  */
 import { Container, Graphics, Text } from 'pixi.js';
+import { openUrl } from './open-store.js';
 
 const ANDROID_URL = 'https://play.google.com/store/apps/details?id=th.dm.card.casino';
 const IOS_URL = 'https://apps.apple.com/app/dummy-zingplay/id6737778971';
@@ -77,7 +78,7 @@ export function createCTAOverlay(width, height) {
     btn.stroke({ color: 0xffffff, width: 1.5, alpha: 0.4 });
     btn.eventMode = 'static';
     btn.cursor = 'pointer';
-    btn.on('pointerdown', () => window.open(url, '_blank'));
+    btn.on('pointerdown', () => openUrl(url));
     container.addChild(btn);
 
     const lbl = new Text({

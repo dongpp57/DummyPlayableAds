@@ -16,6 +16,7 @@ import { createCardSprite, preloadCardTextures, highlightCard } from './card-ren
 import { createTopBar, createTitle, createProgressSection, createTimer, updateTimerText, updateProgressFill, updateIQ } from './ui-header.js';
 import { initDragAndDrop, getCardSlotIndex } from './drag-and-drop-handler.js';
 import { createCTAOverlay } from './cta-overlay.js';
+import { openUrl } from './open-store.js';
 
 const GAME_WIDTH = 640;
 const GAME_HEIGHT = 1136;
@@ -23,6 +24,7 @@ const ANDROID_URL = 'https://play.google.com/store/apps/details?id=th.dm.card.ca
 const IOS_URL = 'https://apps.apple.com/app/dummy-zingplay/id6737778971';
 const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
 const STORE_URL = isIOS ? IOS_URL : ANDROID_URL;
+
 
 async function startGame() {
   const app = new Application();
@@ -206,7 +208,7 @@ async function startGame() {
         // All 3 swaps done
         clearInterval(timerInterval);
         cards.forEach(c => { c.tint = 0xffffff; c.eventMode = 'none'; });
-        setTimeout(() => window.open(STORE_URL, '_blank'), 1000);
+        setTimeout(() => openUrl(STORE_URL), 1000);
       }
     }, 300);
   }
@@ -337,7 +339,7 @@ function createFooterButtons(gameWidth, gameHeight) {
     bg.stroke({ color: 0xffffff, width: 1.5, alpha: 0.5 });
     bg.eventMode = 'static';
     bg.cursor = 'pointer';
-    bg.on('pointerdown', () => window.open(url, '_blank'));
+    bg.on('pointerdown', () => openUrl(url));
     container.addChild(bg);
 
     const t1 = new Text({
