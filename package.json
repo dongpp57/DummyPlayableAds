@@ -1,0 +1,23 @@
+{
+  "name": "playable-ads-pusoy",
+  "version": "1.0.0",
+  "description": "Playable Ad for Pusoy card game",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build && SCENARIO=2-2 vite build && SCENARIO=2-3 vite build && SCENARIO=2-4 vite build && SCENARIO=2-5 vite build",
+    "preview": "vite preview"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "@pixi/devtools": "^2.0.1",
+    "pixi.js": "^8.17.1",
+    "sharp": "^0.34.5",
+    "vite": "^6.4.1"
+  },
+  "devDependencies": {
+    "vite-plugin-singlefile": "^2.3.2"
+  }
+}

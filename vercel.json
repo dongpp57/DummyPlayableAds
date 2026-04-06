@@ -1,0 +1,5 @@
+{
+  "buildCommand": "npx vite build --config vite.config.deploy.js && node build-singles.js",
+  "outputDirectory": "dist-deploy",
+  "framework": null
+}
