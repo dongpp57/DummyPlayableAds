@@ -3,158 +3,436 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Dummy Playable Ads — Scenario Hub</title>
+  <link rel="icon" type="image/png" sizes="32x32" href="assets/favicon-32x32.png">
+  <title>Dummy Playable Ads · ZPS Studio</title>
   <style>
+    /* ===== ZPS Brand Tokens ===== */
+    :root {
+      --zps-brand-red: #E8341A;
+      --zps-brand-orange: #F5A623;
+      --zps-brand-gradient: linear-gradient(135deg, #E8341A 0%, #F5A623 100%);
+
+      --zps-bg-dark: #13151F;
+      --zps-bg-surface: #252836;
+      --zps-bg-elevated: #2E3148;
+
+      --zps-accent-green: #00D68F;
+      --zps-accent-purple: #7C4DFF;
+      --zps-accent-blue: #4A90D9;
+
+      --zps-text-primary: #FFFFFF;
+      --zps-text-secondary: #8A8FA8;
+
+      --shadow-card: 0 4px 16px rgba(0,0,0,0.3);
+      --shadow-elev: 0 8px 28px rgba(0,0,0,0.4);
+      --shadow-red:    0 8px 24px rgba(232,52,26,0.18);
+      --shadow-purple: 0 8px 24px rgba(124,77,255,0.18);
+      --shadow-blue:   0 8px 24px rgba(74,144,217,0.18);
+      --shadow-green:  0 8px 24px rgba(0,214,143,0.18);
+
+      --ease-bounce: cubic-bezier(0.34, 1.56, 0.64, 1);
+      --ease-smooth: cubic-bezier(0.4, 0, 0.2, 1);
+    }
+
     * { margin: 0; padding: 0; box-sizing: border-box; }
-    body {
-      background: #1a1a2e;
-      color: #fff;
-      font-family: 'Arial Black', Arial, sans-serif;
+
+    html, body {
+      background: var(--zps-bg-dark);
+      color: var(--zps-text-primary);
+      font-family: 'Inter', 'Be Vietnam Pro', -apple-system, BlinkMacSystemFont, 'Segoe UI', Arial, sans-serif;
       min-height: 100vh;
-      padding: 40px 20px;
+      -webkit-font-smoothing: antialiased;
     }
-    .container { max-width: 1100px; margin: 0 auto; }
-    h1 {
-      font-size: 32px;
-      color: #FFD700;
-      text-align: center;
-      margin-bottom: 8px;
-      letter-spacing: 1px;
+
+    /* ===== Layout ===== */
+    .topbar {
+      background: var(--zps-bg-surface);
+      border-bottom: 1px solid rgba(255,255,255,0.06);
+      padding: 18px 32px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      position: sticky;
+      top: 0;
+      z-index: 100;
+      backdrop-filter: blur(12px);
     }
-    .subtitle {
-      text-align: center;
-      color: #888;
-      font-size: 14px;
-      font-weight: normal;
-      margin-bottom: 36px;
-    }
-    .pillar {
-      margin-bottom: 32px;
-      background: #20203a;
-      border-radius: 14px;
-      padding: 22px 24px;
-      border-left: 4px solid #FFD700;
-    }
-    .pillar-title {
-      font-size: 18px;
-      color: #FFD700;
-      margin-bottom: 16px;
-      text-transform: uppercase;
-      letter-spacing: 1px;
-    }
-    .grid {
-      display: grid;
-      grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+    .brand {
+      display: flex;
+      align-items: center;
       gap: 14px;
     }
-    .card {
-      background: #2d2d4a;
+    .brand img {
+      width: 42px;
+      height: 42px;
       border-radius: 10px;
-      border: 2px solid transparent;
-      padding: 16px 16px 14px;
-      transition: all 0.2s;
+    }
+    .brand-text {
       display: flex;
       flex-direction: column;
+      gap: 2px;
+    }
+    .brand-name {
+      font-size: 20px;
+      font-weight: 800;
+      background: var(--zps-brand-gradient);
+      -webkit-background-clip: text;
+      background-clip: text;
+      color: transparent;
+      letter-spacing: 0.3px;
+    }
+    .brand-sub {
+      font-size: 11px;
+      font-weight: 600;
+      color: var(--zps-text-secondary);
+      text-transform: uppercase;
+      letter-spacing: 0.12em;
+    }
+
+    .btn-download-all {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 12px 22px;
+      background: var(--zps-brand-gradient);
+      color: #fff;
+      border: none;
+      border-radius: 12px;
+      font-size: 14px;
+      font-weight: 700;
+      font-family: inherit;
+      cursor: pointer;
+      box-shadow: 0 6px 20px rgba(232,52,26,0.35);
+      transition: all 0.25s var(--ease-bounce);
+    }
+    .btn-download-all:hover {
+      transform: translateY(-2px) scale(1.03);
+      box-shadow: 0 10px 28px rgba(232,52,26,0.5);
+    }
+    .btn-download-all:active { transform: translateY(0) scale(0.98); }
+    .btn-download-all:disabled {
+      opacity: 0.6;
+      cursor: not-allowed;
+      transform: none;
+    }
+    .btn-download-all svg {
+      width: 18px;
+      height: 18px;
+    }
+
+    .container {
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 40px 32px 60px;
+    }
+
+    .page-header {
+      margin-bottom: 36px;
+    }
+    .page-title {
+      font-size: 28px;
+      font-weight: 800;
+      letter-spacing: -0.3px;
+      margin-bottom: 6px;
+    }
+    .page-subtitle {
+      font-size: 14px;
+      color: var(--zps-text-secondary);
+      font-weight: 400;
+    }
+
+    /* ===== Pillar Section ===== */
+    .pillar {
+      margin-bottom: 36px;
+    }
+    .pillar-header {
+      display: flex;
+      align-items: center;
       gap: 12px;
+      margin-bottom: 18px;
+    }
+    .pillar-bar {
+      width: 4px;
+      height: 22px;
+      border-radius: 2px;
+    }
+    .pillar-1 .pillar-bar { background: var(--zps-brand-red); }
+    .pillar-2 .pillar-bar { background: var(--zps-accent-purple); }
+    .pillar-3 .pillar-bar { background: var(--zps-accent-blue); }
+    .pillar-legacy .pillar-bar { background: var(--zps-text-secondary); }
+
+    .pillar-title {
+      font-size: 11px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.12em;
+      color: var(--zps-text-secondary);
+    }
+    .pillar-count {
+      font-size: 11px;
+      font-weight: 700;
+      padding: 3px 10px;
+      border-radius: 9999px;
+      background: rgba(255,255,255,0.06);
+      color: var(--zps-text-secondary);
+    }
+
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+      gap: 16px;
+    }
+
+    /* ===== Scenario Card ===== */
+    .card {
+      background: var(--zps-bg-surface);
+      border-radius: 16px;
+      border: 1px solid rgba(255,255,255,0.04);
+      padding: 20px 20px 18px;
+      transition: all 0.25s var(--ease-smooth);
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+      position: relative;
+      overflow: hidden;
+    }
+    .card::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      height: 3px;
+      background: var(--zps-brand-gradient);
+      opacity: 0;
+      transition: opacity 0.25s;
     }
     .card:hover {
-      background: #3a3a5e;
-      border-color: #FFD700;
-      transform: translateY(-2px);
+      transform: translateY(-4px);
+      background: var(--zps-bg-elevated);
+      border-color: rgba(245,166,35,0.3);
     }
-    .card-header { min-height: 56px; }
+    .card:hover::before { opacity: 1; }
+    .card.win:hover     { box-shadow: var(--shadow-green); }
+    .card.lose:hover    { box-shadow: var(--shadow-red); }
+    .card.demo:hover    { box-shadow: var(--shadow-purple); }
+    .card.sort:hover    { box-shadow: var(--shadow-blue); }
+
+    .card-header {
+      min-height: 64px;
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+    .card-id-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px;
+    }
     .card-id {
       font-size: 18px;
-      color: #FFD700;
-      margin-bottom: 4px;
-    }
-    .card-name {
-      font-size: 12px;
-      color: #ccc;
-      font-weight: normal;
-      line-height: 1.4;
+      font-weight: 800;
+      color: #fff;
+      letter-spacing: 0.3px;
     }
     .badge {
-      display: inline-block;
       font-size: 10px;
-      padding: 2px 8px;
-      border-radius: 10px;
-      margin-left: 6px;
-      vertical-align: middle;
-      font-weight: normal;
+      font-weight: 700;
+      padding: 4px 10px;
+      border-radius: 9999px;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
     }
-    .badge-win { background: #1a6b1a; color: #fff; }
-    .badge-lose { background: #8B0000; color: #fff; }
-    .badge-sort { background: #1f4d8a; color: #fff; }
+    .badge-win   { background: rgba(0,214,143,0.15);   color: var(--zps-accent-green); }
+    .badge-lose  { background: rgba(232,52,26,0.18);   color: var(--zps-brand-red); }
+    .badge-demo  { background: rgba(124,77,255,0.18);  color: var(--zps-accent-purple); }
+    .badge-sort  { background: rgba(74,144,217,0.18);  color: var(--zps-accent-blue); }
+    .badge-proto { background: rgba(138,143,168,0.18); color: var(--zps-text-secondary); }
+
+    .card-name {
+      font-size: 13px;
+      color: var(--zps-text-secondary);
+      line-height: 1.5;
+      font-weight: 400;
+    }
+
     .btn-row {
       display: flex;
       gap: 8px;
     }
     .btn {
       flex: 1;
-      padding: 10px 0;
-      border-radius: 8px;
+      padding: 11px 0;
+      border-radius: 10px;
       text-align: center;
       text-decoration: none;
       font-size: 13px;
-      font-weight: bold;
+      font-weight: 700;
       cursor: pointer;
       border: none;
       font-family: inherit;
-      transition: all 0.15s;
+      transition: all 0.2s var(--ease-smooth);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+    }
+    .btn svg {
+      width: 14px;
+      height: 14px;
     }
     .btn-view {
-      background: #FF6B1A;
+      background: var(--zps-brand-gradient);
       color: #fff;
+      box-shadow: 0 4px 12px rgba(232,52,26,0.25);
     }
-    .btn-view:hover { background: #ff8533; }
+    .btn-view:hover {
+      transform: translateY(-1px);
+      box-shadow: 0 6px 16px rgba(232,52,26,0.4);
+    }
+    .btn-view:active { transform: translateY(0) scale(0.97); }
+
     .btn-download {
-      background: #3a3a5e;
-      color: #ccc;
-      border: 1px solid #555;
+      background: rgba(255,255,255,0.06);
+      color: var(--zps-text-primary);
+      border: 1px solid rgba(255,255,255,0.08);
     }
     .btn-download:hover {
-      background: #4a4a72;
-      color: #fff;
-      border-color: #FFD700;
+      background: rgba(245,166,35,0.12);
+      border-color: rgba(245,166,35,0.35);
+      color: var(--zps-brand-orange);
     }
+    .btn-download:active { transform: scale(0.97); }
+
+    /* ===== Footer ===== */
     .footer {
       text-align: center;
-      margin-top: 40px;
-      color: #666;
+      margin-top: 60px;
+      padding-top: 28px;
+      border-top: 1px solid rgba(255,255,255,0.06);
+      color: var(--zps-text-secondary);
       font-size: 12px;
-      font-weight: normal;
+      font-weight: 400;
+    }
+    .footer-brand {
+      color: var(--zps-brand-orange);
+      font-weight: 600;
+    }
+
+    /* ===== Toast ===== */
+    .toast {
+      position: fixed;
+      bottom: 28px;
+      left: 50%;
+      transform: translateX(-50%) translateY(20px);
+      background: var(--zps-bg-elevated);
+      color: #fff;
+      padding: 12px 22px;
+      border-radius: 12px;
+      font-size: 13px;
+      font-weight: 600;
+      box-shadow: var(--shadow-elev);
+      border: 1px solid rgba(245,166,35,0.3);
+      opacity: 0;
+      pointer-events: none;
+      transition: all 0.3s var(--ease-bounce);
+      z-index: 1000;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+    .toast.show {
+      opacity: 1;
+      transform: translateX(-50%) translateY(0);
+    }
+    .toast .spinner {
+      width: 14px;
+      height: 14px;
+      border: 2px solid rgba(245,166,35,0.3);
+      border-top-color: var(--zps-brand-orange);
+      border-radius: 50%;
+      animation: spin 0.8s linear infinite;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    @media (max-width: 640px) {
+      .topbar { padding: 14px 18px; }
+      .container { padding: 24px 18px 40px; }
+      .page-title { font-size: 22px; }
+      .grid { grid-template-columns: 1fr; gap: 12px; }
+      .btn-download-all { padding: 10px 16px; font-size: 12px; }
     }
   </style>
 </head>
 <body>
+  <header class="topbar">
+    <div class="brand">
+      <img src="assets/zps_fox.png" alt="ZPS Studio" />
+      <div class="brand-text">
+        <div class="brand-name">ZPS Studio</div>
+        <div class="brand-sub">Playable Ads Hub</div>
+      </div>
+    </div>
+    <button class="btn-download-all" id="downloadAllBtn">
+      <svg viewBox="0 0 24 24" fill="none">
+        <path d="M12 3v12m0 0l-4-4m4 4l4-4" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+        <path d="M3 17v2a2 2 0 002 2h14a2 2 0 002-2v-2" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+      </svg>
+      Download All (.zip)
+    </button>
+  </header>
+
   <div class="container">
-    <h1>Dummy Playable Ads</h1>
-    <div class="subtitle">Scenario Hub — 640 × 1136 portrait, 20s timer</div>
+    <div class="page-header">
+      <div class="page-title">Dummy Playable Ads</div>
+      <div class="page-subtitle">11 scenarios · 640 × 1136 portrait · 20s timer · PixiJS v8 + Vite</div>
+    </div>
 
-    <div class="pillar">
-      <div class="pillar-title">Pillar 1 · Score Reward / Penalty Moments</div>
+    <section class="pillar pillar-1">
+      <div class="pillar-header">
+        <div class="pillar-bar"></div>
+        <div class="pillar-title">Pillar 1 · Score Reward / Penalty</div>
+        <div class="pillar-count" id="count-1">0</div>
+      </div>
       <div class="grid" id="pillar-1"></div>
-    </div>
+    </section>
 
-    <div class="pillar">
-      <div class="pillar-title">Pillar 2 · Action Variety</div>
+    <section class="pillar pillar-2">
+      <div class="pillar-header">
+        <div class="pillar-bar"></div>
+        <div class="pillar-title">Pillar 2 · Action Variety</div>
+        <div class="pillar-count" id="count-2">0</div>
+      </div>
       <div class="grid" id="pillar-2"></div>
-    </div>
+    </section>
 
-    <div class="pillar">
-      <div class="pillar-title">Pillar 3 · Card Sorting</div>
+    <section class="pillar pillar-3">
+      <div class="pillar-header">
+        <div class="pillar-bar"></div>
+        <div class="pillar-title">Pillar 3 · Card Sorting</div>
+        <div class="pillar-count" id="count-3">0</div>
+      </div>
       <div class="grid" id="pillar-3"></div>
-    </div>
+    </section>
 
-    <div class="pillar">
-      <div class="pillar-title">Legacy</div>
+    <section class="pillar pillar-legacy">
+      <div class="pillar-header">
+        <div class="pillar-bar"></div>
+        <div class="pillar-title">Legacy</div>
+        <div class="pillar-count" id="count-legacy">0</div>
+      </div>
       <div class="grid" id="pillar-legacy"></div>
-    </div>
+    </section>
 
     <div class="footer">
-      Dummy ZingPlay Thailand · Built with PixiJS v8 + Vite
+      Built with <span class="footer-brand">PixiJS v8 + Vite</span> · Dummy ZingPlay Thailand
     </div>
+  </div>
+
+  <div class="toast" id="toast">
+    <div class="spinner"></div>
+    <span id="toastText">Preparing files...</span>
   </div>
 
   <script>
@@ -162,7 +440,7 @@
       'pillar-1': [
         { id: 's1-v1',  name: 'Win: Grab the open card (+50)',             badge: 'win',  badgeText: 'WIN' },
         { id: 's2a-v1', name: 'Pain: Free-tap, opponent grabs open (-50)', badge: 'lose', badgeText: 'LOSE' },
-        { id: 's2b-v1', name: 'Watch the trap: Auto-play warning',         badge: 'lose', badgeText: 'DEMO' },
+        { id: 's2b-v1', name: 'Watch the trap: Auto-play warning',         badge: 'demo', badgeText: 'DEMO' },
         { id: 's3-v1',  name: 'Win: Grab the Spe-to (+50)',                badge: 'win',  badgeText: 'WIN' },
       ],
       'pillar-2': [
@@ -176,7 +454,7 @@
         { id: 's9-v1', name: 'Deduce: Pick the right card → multi-meld',   badge: 'sort', badgeText: 'SORT' },
       ],
       'pillar-legacy': [
-        { id: '1-1', name: 'Original sort prototype', badge: 'sort', badgeText: 'PROTO' },
+        { id: '1-1', name: 'Original sort prototype', badge: 'proto', badgeText: 'PROTO' },
       ],
     };
 
@@ -188,40 +466,39 @@
       if (opts.target) node.setAttribute('target', opts.target);
       if (opts.rel) node.setAttribute('rel', opts.rel);
       if (opts.download != null) node.setAttribute('download', opts.download);
+      if (opts.html) node.insertAdjacentHTML('beforeend', opts.html); // only for trusted SVG strings
       return node;
     }
 
-    function renderCard(s) {
-      const sourceHref = 'dist/index-' + s.id + '.html';
-      const distHref   = 'dist/index-' + s.id + '.html';
-      const filename   = 'dummy-playable-' + s.id + '.html';
+    const ICON_VIEW = '<svg viewBox="0 0 24 24" fill="none"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7-10-7-10-7z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><circle cx="12" cy="12" r="3" stroke="currentColor" stroke-width="2"/></svg>';
+    const ICON_DOWNLOAD = '<svg viewBox="0 0 24 24" fill="none"><path d="M12 3v12m0 0l-4-4m4 4l4-4" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><path d="M3 17v2a2 2 0 002 2h14a2 2 0 002-2v-2" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>';
 
-      const card = el('div', { className: 'card' });
+    function makeBtn(className, label, href, download) {
+      const a = el('a', { className: 'btn ' + className, href: href });
+      if (download) a.setAttribute('download', download);
+      else { a.setAttribute('target', '_blank'); a.setAttribute('rel', 'noopener'); }
+      // SVG icons are static literals (no user data) — safe to inject
+      a.insertAdjacentHTML('afterbegin', className === 'btn-view' ? ICON_VIEW : ICON_DOWNLOAD);
+      a.appendChild(document.createTextNode(label));
+      return a;
+    }
+
+    function renderCard(s) {
+      const distHref = 'dist/index-' + s.id + '.html';
+      const filename = 'dummy-playable-' + s.id + '.html';
+
+      const card = el('div', { className: 'card ' + s.badge });
 
       const header = el('div', { className: 'card-header' });
-      const idLine = el('div', { className: 'card-id', text: s.id.toUpperCase() + ' ' });
-      const badge = el('span', { className: 'badge badge-' + s.badge, text: s.badgeText });
-      idLine.appendChild(badge);
-      const nameLine = el('div', { className: 'card-name', text: s.name });
-      header.appendChild(idLine);
-      header.appendChild(nameLine);
+      const idRow = el('div', { className: 'card-id-row' });
+      idRow.appendChild(el('div', { className: 'card-id', text: s.id.toUpperCase() }));
+      idRow.appendChild(el('span', { className: 'badge badge-' + s.badge, text: s.badgeText }));
+      header.appendChild(idRow);
+      header.appendChild(el('div', { className: 'card-name', text: s.name }));
 
       const btnRow = el('div', { className: 'btn-row' });
-      const viewBtn = el('a', {
-        className: 'btn btn-view',
-        text: 'View',
-        href: sourceHref,
-        target: '_blank',
-        rel: 'noopener',
-      });
-      const downloadBtn = el('a', {
-        className: 'btn btn-download',
-        text: 'Download',
-        href: distHref,
-        download: filename,
-      });
-      btnRow.appendChild(viewBtn);
-      btnRow.appendChild(downloadBtn);
+      btnRow.appendChild(makeBtn('btn-view', 'View', distHref));
+      btnRow.appendChild(makeBtn('btn-download', 'Download', distHref, filename));
 
       card.appendChild(header);
       card.appendChild(btnRow);
@@ -233,9 +510,89 @@
       const items = entry[1];
       const grid = document.getElementById(pillarId);
       if (!grid) return;
-      items.forEach(function (s) {
-        grid.appendChild(renderCard(s));
+      items.forEach(function (s) { grid.appendChild(renderCard(s)); });
+      const countEl = document.getElementById('count-' + pillarId.replace('pillar-', ''));
+      if (countEl) countEl.textContent = items.length;
+    });
+
+    // ===== Download All as ZIP =====
+    const toast = document.getElementById('toast');
+    const toastText = document.getElementById('toastText');
+    function showToast(text) {
+      toastText.textContent = text;
+      toast.classList.add('show');
+    }
+    function hideToast(delay) {
+      setTimeout(function () { toast.classList.remove('show'); }, delay || 0);
+    }
+
+    function loadJSZip() {
+      return new Promise(function (resolve, reject) {
+        if (window.JSZip) return resolve(window.JSZip);
+        const script = document.createElement('script');
+        script.src = 'https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js';
+        script.onload = function () { resolve(window.JSZip); };
+        script.onerror = function () { reject(new Error('Failed to load JSZip')); };
+        document.head.appendChild(script);
       });
+    }
+
+    const downloadAllBtn = document.getElementById('downloadAllBtn');
+    downloadAllBtn.addEventListener('click', async function () {
+      const allScenarios = [].concat(
+        SCENARIOS['pillar-1'],
+        SCENARIOS['pillar-2'],
+        SCENARIOS['pillar-3'],
+        SCENARIOS['pillar-legacy']
+      );
+
+      downloadAllBtn.disabled = true;
+      showToast('Loading ZIP library...');
+
+      try {
+        const JSZip = await loadJSZip();
+        const zip = new JSZip();
+        const folder = zip.folder('dummy-playable-ads');
+
+        for (let i = 0; i < allScenarios.length; i++) {
+          const s = allScenarios[i];
+          showToast('Fetching ' + (i + 1) + '/' + allScenarios.length + '  ·  ' + s.id);
+          const url = 'dist/index-' + s.id + '.html';
+          try {
+            const res = await fetch(url);
+            if (!res.ok) throw new Error('HTTP ' + res.status);
+            const html = await res.text();
+            folder.file('dummy-playable-' + s.id + '.html', html);
+          } catch (e) {
+            console.warn('Skip ' + s.id + ':', e.message);
+          }
+        }
+
+        showToast('Compressing...');
+        const blob = await zip.generateAsync({
+          type: 'blob',
+          compression: 'DEFLATE',
+          compressionOptions: { level: 6 },
+        });
+
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = 'dummy-playable-ads.zip';
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+
+        showToast('Done · ' + allScenarios.length + ' files zipped');
+        hideToast(2200);
+      } catch (e) {
+        console.error(e);
+        showToast('Error: ' + e.message);
+        hideToast(3000);
+      } finally {
+        downloadAllBtn.disabled = false;
+      }
     });
   </script>
 </body>
