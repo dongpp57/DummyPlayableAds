@@ -1,6 +1,6 @@
 node_modules/
-dist/
 dist-deploy/
+# dist/ is committed so the index.html hub can link to pre-built scenario HTMLs on Vercel
 .DS_Store
 *.log
 .env
