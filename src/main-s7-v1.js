@@ -1,43 +1,38 @@
 /**
- * Main entry — Dummy Playable Ad Scenario 1-1
+ * Main entry — Dummy Playable Ad Scenario S7 V1
+ * Pillar: Sắp xếp bài | Mode: Guided Drag (free order)
  * Canvas: 640x1136
- * 10 cards single row, 3 swaps to form Set (7♥7♣7♦) + Run (8-Q hearts)
+ * 7 lá hand → drag vào 2 khung target (Phỏm + Bộ), K♦ giữ nguyên.
  */
 import { Application, Sprite, NineSliceSprite, Assets, Container, Graphics, Text } from 'pixi.js';
 import { initDevtools } from '@pixi/devtools';
-import bgImageUrl from '../res/common/img_bg.webp?url';
+import bgImageUrl from '../res/DummyAsset/Background1.webp?url';
 import iconDummyUrl from '../Logo/iconDummy.webp?url';
 import imgHandUrl from '../res/style-1/img_hand.webp?url';
+import rummyBannerUrl from '../res/DummyAsset/Rummy.webp?url';
 import imgHeaderUrl from '../res/style-1/img_header.webp?url';
 import slotWhiteUrl from '../res/style-1/slot_white.webp?url';
 
-import { getInitialHand, SWAP_STEPS } from './card-data-1-1.js';
-import { computeSlots, createGroupHighlights, CARD_SCALE, SCALED_W, SCALED_H } from './game-board-1-1.js';
+import { getInitialHand, CARD_TARGETS, HINT_ORDER, PROGRESS_STEPS, TOTAL_TARGET_CARDS } from './card-data-s7-v1.js';
+import { computeHandSlots, computeTargetBoxes, createTargetBoxes, CARD_SCALE, SCALED_W, SCALED_H, TARGET_GROUPS, TARGET_SLOT_SCALE } from './game-board-s7-v1.js';
 import { createCardSprite, preloadCardTextures, registerCardTexture, highlightCard } from './card-renderer.js';
 
-// 1-1: 10 cards used
+// S7 uses 7 cards — static imports for Vite tree-shake
 import card7hearts from '../res/common/composed/7_hearts.webp?url';
+import card3spades from '../res/common/composed/3_spades.webp?url';
 import card7clubs from '../res/common/composed/7_clubs.webp?url';
 import cardKdiamonds from '../res/common/composed/K_diamonds.webp?url';
-import card8hearts from '../res/common/composed/8_hearts.webp?url';
-import cardQspades from '../res/common/composed/Q_spades.webp?url';
-import card9hearts from '../res/common/composed/9_hearts.webp?url';
-import card10hearts from '../res/common/composed/10_hearts.webp?url';
-import cardJhearts from '../res/common/composed/J_hearts.webp?url';
+import card5spades from '../res/common/composed/5_spades.webp?url';
 import card7diamonds from '../res/common/composed/7_diamonds.webp?url';
-import cardQhearts from '../res/common/composed/Q_hearts.webp?url';
+import card4spades from '../res/common/composed/4_spades.webp?url';
 registerCardTexture('7_hearts',   card7hearts);
+registerCardTexture('3_spades',   card3spades);
 registerCardTexture('7_clubs',    card7clubs);
 registerCardTexture('K_diamonds', cardKdiamonds);
-registerCardTexture('8_hearts',   card8hearts);
-registerCardTexture('Q_spades',   cardQspades);
-registerCardTexture('9_hearts',   card9hearts);
-registerCardTexture('10_hearts',  card10hearts);
-registerCardTexture('J_hearts',   cardJhearts);
+registerCardTexture('5_spades',   card5spades);
 registerCardTexture('7_diamonds', card7diamonds);
-registerCardTexture('Q_hearts',   cardQhearts);
+registerCardTexture('4_spades',   card4spades);
 import { createTopBar, createTitle, createProgressSection, createTimer, updateTimerText, updateProgressFill, updateIQ } from './ui-header.js';
-import { initDragAndDrop, getCardSlotIndex } from './drag-and-drop-handler.js';
 import { createCTAOverlay } from './cta-overlay.js';
 import { openUrl } from './open-store.js';
 
@@ -47,7 +42,6 @@ const ANDROID_URL = 'https://play.google.com/store/apps/details?id=th.dm.card.ca
 const IOS_URL = 'https://apps.apple.com/app/dummy-zingplay/id6737778971';
 const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
 const STORE_URL = isIOS ? IOS_URL : ANDROID_URL;
-
 
 async function startGame() {
   const app = new Application();
@@ -84,8 +78,6 @@ async function startGame() {
   const header = new Sprite(headerTex);
   header.width = GAME_WIDTH;
   header.height = (headerTex.height / headerTex.width) * GAME_WIDTH;
-  header.x = 0;
-  header.y = 0;
   app.stage.addChild(header);
 
   // --- Top bar ---
@@ -96,6 +88,7 @@ async function startGame() {
 
   // --- Title ---
   const title = createTitle(GAME_WIDTH, 140);
+  title.text = 'Drag cards into groups';
   app.stage.addChild(title);
   let titleScale = 1, titleGrowing = true;
   app.ticker.add(() => {
@@ -111,50 +104,40 @@ async function startGame() {
   progressSection.x -= 10;
   app.stage.addChild(progressSection);
 
-  // --- Card board ---
-  const BOARD_Y = 530;
-  const slots = computeSlots(GAME_WIDTH, BOARD_Y);
+  // --- Target boxes ---
+  const targetBoxes = computeTargetBoxes(GAME_WIDTH);
+  const boxesGfx = createTargetBoxes(targetBoxes);
+  app.stage.addChild(boxesGfx);
 
-  // Group highlight backgrounds (added BEFORE cards so they render behind)
-  const highlights = createGroupHighlights(slots);
-  highlights.forEach(h => app.stage.addChild(h));
-
-  // --- Cards ---
-  const hand = getInitialHand();
+  // --- Hand cards ---
+  const handSlots = computeHandSlots(GAME_WIDTH);
+  const handData = getInitialHand();
   const cards = [];
-  for (const cardData of hand) {
-    const card = createCardSprite(cardData);
+  // home positions per card (where it returns on bad drop)
+  const homePos = handSlots.map(s => ({ x: s.x, y: s.y }));
+
+  for (let i = 0; i < handData.length; i++) {
+    const card = createCardSprite(handData[i]);
     card.scale.set(CARD_SCALE);
-    card.x = slots[cards.length].x;
-    card.y = slots[cards.length].y;
+    card.x = homePos[i].x;
+    card.y = homePos[i].y;
+    card._origIdx = i;
+    card._target = CARD_TARGETS[i];
+    card._placed = false;
     app.stage.addChild(card);
     cards.push(card);
   }
 
-  // --- Timer (positioned right side, above board) ---
-  const timer = await createTimer(GAME_WIDTH - 75, 460);
+  // --- Timer ---
+  const timer = await createTimer(GAME_WIDTH - 75, 370);
   app.stage.addChild(timer);
 
-  // Debug: log card positions
-  cards.forEach((c, i) => console.log(`[card ${i}] x=${c.x.toFixed(1)} y=${c.y.toFixed(1)} scale=${c.scale.x}`));
-
-  // --- Drag & Drop ---
-  initDragAndDrop(cards, slots, onSwap);
-
-  // --- Swap state ---
-  let swapCount = 0;
+  // --- State ---
+  let correctCount = 0;
   let handSprite = null;
   let timerInterval;
-
-  /** Build slotToOriginal map: slot index → original card index */
-  function buildSlotToOriginal() {
-    const map = new Map();
-    cards.forEach((card, origIdx) => {
-      const slotIdx = getCardSlotIndex(card);
-      map.set(slotIdx, origIdx);
-    });
-    return map;
-  }
+  // track which inner slot of each box is filled
+  const boxFilled = { phom: 0, bo: 0 };
 
   function clearHand() {
     if (handSprite) {
@@ -175,74 +158,162 @@ async function startGame() {
     requestAnimationFrame(tick);
   }
 
-  function dimCards(activeOriginalIndices) {
-    cards.forEach((c, origIdx) => {
-      const isActive = activeOriginalIndices.includes(origIdx);
-      c.tint = isActive ? 0xffffff : 0x888888;
-      c.eventMode = isActive ? 'static' : 'none';
-    });
+  function tweenTo(card, tx, ty, duration = 220) {
+    const sx = card.x, sy = card.y;
+    const start = Date.now();
+    const tick = () => {
+      const t = Math.min((Date.now() - start) / duration, 1);
+      const e = t * t * (3 - 2 * t);
+      card.x = sx + (tx - sx) * e;
+      card.y = sy + (ty - sy) * e;
+      if (t < 1) requestAnimationFrame(tick);
+    };
+    requestAnimationFrame(tick);
   }
 
-  function snapAllCardsToSlots() {
-    cards.forEach((card, origIdx) => {
-      const slotIdx = getCardSlotIndex(card);
-      if (slotIdx >= 0 && slotIdx < slots.length) {
-        const slot = slots[slotIdx];
-        console.log(`[snap] card${origIdx} slotIdx=${slotIdx} before=(${card.x.toFixed(1)},${card.y.toFixed(1)}) slot=(${slot.x.toFixed(1)},${slot.y})`);
-        card.x = slot.x;
-        card.y = slot.y;
-        card.scale.set(CARD_SCALE);
-        card.rotation = 0;
-      }
-    });
+  function getNextHintCard() {
+    for (const idx of HINT_ORDER) {
+      const c = cards[idx];
+      if (!c._placed) return c;
+    }
+    return null;
   }
 
-  function onSwap() {
-    const step = SWAP_STEPS[swapCount];
-    if (!step) return;
-
-    const slotToOriginal = buildSlotToOriginal();
-    if (!step.isComplete(slotToOriginal)) return;
-
-    swapCount++;
-    cards.forEach(c => highlightCard(c, false));
+  function showHintForNextCard() {
     clearHand();
-    // Force all cards to correct slot positions (fixes any animation glitches)
-    setTimeout(snapAllCardsToSlots, 220);
+    const next = getNextHintCard();
+    if (!next) return;
 
-    // Show group highlight for completed groups
-    if (swapCount === 1) highlights[0].visible = true; // Set complete
-    if (swapCount === 3) highlights[1].visible = true; // Run complete
+    // Dim all cards except the next hint and K♦ (locked anyway)
+    cards.forEach((c) => {
+      if (c._placed) return;
+      const isHint = (c === next);
+      const isLeftover = (c._target === 'leftover');
+      c.tint = isHint ? 0xffffff : (isLeftover ? 0x666666 : 0xaaaaaa);
+    });
+    highlightCard(next, true);
 
-    setTimeout(() => {
-      updateIQ(progressSection, step.iqAfter);
-      animateProgress(step.progressFrom, step.progressAfter);
-
-      if (swapCount < 3) {
-        const nextStep = SWAP_STEPS[swapCount];
-        // Find current card positions for next highlight pair
-        const nextA = cards[nextStep.highlightA];
-        const nextB = cards[nextStep.highlightB];
-        dimCards([nextStep.highlightA, nextStep.highlightB]);
-        highlightCard(nextA, true);
-        highlightCard(nextB, true);
-        createHandAnimation(app, nextA, nextB).then(h => { handSprite = h; });
-      } else {
-        // All 3 swaps done
-        clearInterval(timerInterval);
-        cards.forEach(c => { c.tint = 0xffffff; c.eventMode = 'none'; });
-        setTimeout(() => openUrl(STORE_URL), 1000);
-      }
-    }, 300);
+    // Hand pointer animates from card → target box center
+    const targetBox = targetBoxes[next._target];
+    const tx = targetBox.x + targetBox.w / 2 - SCALED_W / 2;
+    const ty = targetBox.y + targetBox.h / 2 - SCALED_H / 2;
+    createHandAnimation(app, next, { x: tx, y: ty }).then(h => { handSprite = h; });
   }
 
-  // --- Initial highlight: step 0 ---
-  const firstStep = SWAP_STEPS[0];
-  cards.forEach(c => { c.eventMode = 'none'; });
-  dimCards([firstStep.highlightA, firstStep.highlightB]);
-  highlightCard(cards[firstStep.highlightA], true);
-  highlightCard(cards[firstStep.highlightB], true);
-  handSprite = await createHandAnimation(app, cards[firstStep.highlightA], cards[firstStep.highlightB]);
+  function placeCardInBox(card, boxKey) {
+    const box = targetBoxes[boxKey];
+    const slotIdx = boxFilled[boxKey];
+    const slot = box.slots[slotIdx];
+    boxFilled[boxKey]++;
+    card._placed = true;
+    card.eventMode = 'none';
+    highlightCard(card, false);
+    tweenTo(card, slot.x, slot.y, 200);
+    // Scale card down to fit target slot
+    const startScale = card.scale.x;
+    const scaleStart = Date.now();
+    const scaleTick = () => {
+      const t = Math.min((Date.now() - scaleStart) / 200, 1);
+      const e = t * t * (3 - 2 * t);
+      const s = startScale + (TARGET_SLOT_SCALE - startScale) * e;
+      card.scale.set(s);
+      if (t < 1) requestAnimationFrame(scaleTick);
+    };
+    requestAnimationFrame(scaleTick);
+
+    correctCount++;
+    setTimeout(() => {
+      const step = PROGRESS_STEPS[correctCount];
+      const prev = PROGRESS_STEPS[correctCount - 1];
+      updateIQ(progressSection, step.iq);
+      animateProgress(prev.progress, step.progress);
+
+      // Check group completion
+      if (boxFilled[boxKey] === TARGET_GROUPS[boxKey].capacity) {
+        boxesGfx.completeFns[boxKey]();
+      }
+
+      if (correctCount >= TOTAL_TARGET_CARDS) {
+        showRummyBanner(app);
+        // All done!
+        clearInterval(timerInterval);
+        clearHand();
+        title.text = 'RUMMY!';
+        cards.forEach(c => { c.tint = 0xffffff; c.eventMode = 'none'; });
+        setTimeout(() => openUrl(STORE_URL), 1200);
+      } else {
+        showHintForNextCard();
+      }
+    }, 250);
+  }
+
+  function rejectDrop(card) {
+    tweenTo(card, homePos[card._origIdx].x, homePos[card._origIdx].y, 220);
+  }
+
+  function isInsideBox(globalX, globalY, box) {
+    return globalX >= box.x && globalX <= box.x + box.w
+        && globalY >= box.y && globalY <= box.y + box.h;
+  }
+
+  // --- Drag handler ---
+  function setupCardDrag(card) {
+    if (card._target === 'leftover') {
+      card.eventMode = 'none';
+      card.alpha = 0.85;
+      return;
+    }
+    card.eventMode = 'static';
+    card.cursor = 'pointer';
+
+    let dragging = false;
+    let offset = { x: 0, y: 0 };
+
+    card.on('pointerdown', (ev) => {
+      if (card._placed) return;
+      dragging = true;
+      const pos = ev.global;
+      offset.x = card.x - pos.x;
+      offset.y = card.y - pos.y;
+      // bring to top
+      app.stage.removeChild(card);
+      app.stage.addChild(card);
+      clearHand();
+    });
+
+    app.stage.eventMode = 'static';
+    app.stage.on('pointermove', (ev) => {
+      if (!dragging) return;
+      card.x = ev.global.x + offset.x;
+      card.y = ev.global.y + offset.y;
+    });
+
+    const endDrag = (ev) => {
+      if (!dragging) return;
+      dragging = false;
+      const cx = card.x + SCALED_W / 2;
+      const cy = card.y + SCALED_H / 2;
+
+      // Check correct box
+      const correctBox = targetBoxes[card._target];
+      if (isInsideBox(cx, cy, correctBox)) {
+        placeCardInBox(card, card._target);
+      } else {
+        rejectDrop(card);
+        // restore hint after a moment
+        setTimeout(showHintForNextCard, 250);
+      }
+    };
+    app.stage.on('pointerup', endDrag);
+    app.stage.on('pointerupoutside', endDrag);
+  }
+
+  cards.forEach(setupCardDrag);
+
+  // --- Initial state ---
+  updateIQ(progressSection, PROGRESS_STEPS[0].iq);
+  updateProgressFill(progressSection, PROGRESS_STEPS[0].progress);
+  showHintForNextCard();
 
   // --- Bottom bar ---
   const slotTex = await Assets.load(slotWhiteUrl);
@@ -255,7 +326,7 @@ async function startGame() {
   bar.alpha = 0.4;
   app.stage.addChild(bar);
 
-  // --- Store buttons footer (App Store + Google Play) ---
+  // --- Footer ---
   const footerBtns = await createFooterButtons(GAME_WIDTH, GAME_HEIGHT);
   app.stage.addChild(footerBtns);
 
@@ -264,7 +335,7 @@ async function startGame() {
   app.stage.addChild(ctaOverlay);
 
   // --- Timer countdown ---
-  let timeLeft = 30;
+  let timeLeft = 20;
   timerInterval = setInterval(() => {
     timeLeft--;
     updateTimerText(timer, timeLeft);
@@ -273,20 +344,50 @@ async function startGame() {
       title.text = "Time's Up!";
       clearHand();
       cards.forEach(c => { highlightCard(c, false); c.eventMode = 'none'; });
-      // Re-add to stage to ensure top z-order
       app.stage.removeChild(ctaOverlay);
       app.stage.addChild(ctaOverlay);
       ctaOverlay.visible = true;
     }
   }, 1000);
 
-  // CTA pulse animation
   app.ticker.add(() => {
     if (ctaOverlay.visible && ctaOverlay._animateCTA) ctaOverlay._animateCTA();
   });
 }
 
-async function createHandAnimation(app, cardA, cardB) {
+async function showRummyBanner(app) {
+  try {
+    const tex = await Assets.load(rummyBannerUrl);
+    const banner = new Sprite(tex);
+    banner.anchor.set(0.5);
+    banner.width = 640 * 0.85;
+    banner.height = banner.width * (tex.height / tex.width);
+    banner.x = 320;
+    banner.y = 780;
+    banner.scale.set(0);
+    app.stage.addChild(banner);
+    const start = Date.now();
+    const pop = () => {
+      const el = Date.now() - start;
+      if (el < 250) {
+        const t = el / 250;
+        banner.scale.set(1.15 * (t * t * (3 - 2 * t)));
+        requestAnimationFrame(pop);
+      } else if (el < 400) {
+        const t = (el - 250) / 150;
+        banner.scale.set(1.15 - 0.15 * t);
+        requestAnimationFrame(pop);
+      } else {
+        banner.scale.set(1);
+      }
+    };
+    pop();
+  } catch (e) {
+    console.warn('Rummy banner load failed', e);
+  }
+}
+
+async function createHandAnimation(app, cardA, cardBPos) {
   const texture = await Assets.load(imgHandUrl);
   const hand = new Sprite(texture);
   hand.anchor.set(0.3, 0);
@@ -295,8 +396,8 @@ async function createHandAnimation(app, cardA, cardB) {
 
   const ax = cardA.x + SCALED_W / 2 + 20;
   const ay = cardA.y + SCALED_H / 2 + 120;
-  const bx = cardB.x + SCALED_W / 2 + 20;
-  const by = cardB.y + SCALED_H / 2 + 120;
+  const bx = cardBPos.x + SCALED_W / 2 + 20;
+  const by = cardBPos.y + SCALED_H / 2 + 120;
 
   hand.x = ax;
   hand.y = ay;
@@ -305,7 +406,7 @@ async function createHandAnimation(app, cardA, cardB) {
 
   const moveDuration = 800;
   const fadeOutDuration = 200;
-  const delayAfterFade = 1000;
+  const delayAfterFade = 800;
   const fadeInDuration = 200;
   const pauseAtStart = 300;
   const totalCycle = pauseAtStart + moveDuration + fadeOutDuration + delayAfterFade + fadeInDuration;
@@ -313,31 +414,25 @@ async function createHandAnimation(app, cardA, cardB) {
   const startTime = Date.now();
   const stableTickFn = () => {
     const elapsed = (Date.now() - startTime) % totalCycle;
-
     if (elapsed < pauseAtStart) {
-      hand.visible = true;
-      hand.alpha = 1;
-      hand.x = ax;
-      hand.y = ay;
+      hand.visible = true; hand.alpha = 1;
+      hand.x = ax; hand.y = ay;
     } else if (elapsed < pauseAtStart + moveDuration) {
       const t = (elapsed - pauseAtStart) / moveDuration;
       const ease = t * t * (3 - 2 * t);
-      hand.visible = true;
-      hand.alpha = 1;
+      hand.visible = true; hand.alpha = 1;
       hand.x = ax + (bx - ax) * ease;
       hand.y = ay + (by - ay) * ease;
     } else if (elapsed < pauseAtStart + moveDuration + fadeOutDuration) {
       const t = (elapsed - pauseAtStart - moveDuration) / fadeOutDuration;
-      hand.x = bx;
-      hand.y = by;
+      hand.x = bx; hand.y = by;
       hand.alpha = 1 - t;
     } else if (elapsed < pauseAtStart + moveDuration + fadeOutDuration + delayAfterFade) {
       hand.visible = false;
     } else {
       hand.visible = true;
       const t = (elapsed - pauseAtStart - moveDuration - fadeOutDuration - delayAfterFade) / fadeInDuration;
-      hand.x = ax;
-      hand.y = ay;
+      hand.x = ax; hand.y = ay;
       hand.alpha = Math.min(t, 1);
     }
   };
@@ -349,11 +444,6 @@ async function createHandAnimation(app, cardA, cardB) {
 
 async function createFooterButtons(gameWidth, gameHeight) {
   const container = new Container();
-
-  // Footer layout (NOT full width):
-  //   [Icon]   [App Store btn] [Google Play btn]
-  //            [    Search pill (= 2 btns wide)    ]
-
   const iconSize = 92;
   const btnH = 50;
   const btnGap = 10;
@@ -362,27 +452,20 @@ async function createFooterButtons(gameWidth, gameHeight) {
   const iconGap = 12;
   const totalContentW = iconSize + iconGap + totalRightW;
   const startX = (gameWidth - totalContentW) / 2;
-
   const pillH = 36;
   const innerGap = 8;
-  // Footer block height = icon (top-aligned with btn row, ends at pill bottom)
-  // btn row + gap + pill
   const blockH = btnH + innerGap + pillH;
   const blockY = gameHeight - blockH - 18;
-
   const iconX = startX;
   const iconY = blockY + (blockH - iconSize) / 2;
 
-  // App icon
   try {
     const iconTex = await Assets.load(iconDummyUrl);
     const icon = new Sprite(iconTex);
-    icon.width = iconSize;
-    icon.height = iconSize;
-    icon.x = iconX;
-    icon.y = iconY;
+    icon.width = iconSize; icon.height = iconSize;
+    icon.x = iconX; icon.y = iconY;
     container.addChild(icon);
-  } catch (_) { /* icon optional */ }
+  } catch (_) {}
 
   const rightStartX = iconX + iconSize + iconGap;
   const btnY = blockY;
@@ -397,37 +480,22 @@ async function createFooterButtons(gameWidth, gameHeight) {
     bg.on('pointerdown', () => openUrl(url));
     container.addChild(bg);
 
-    const t1 = new Text({
-      text: label1,
-      style: { fontFamily: 'Arial', fontSize: 11, fill: '#dddddd' },
-    });
+    const t1 = new Text({ text: label1, style: { fontFamily: 'Arial', fontSize: 11, fill: '#dddddd' } });
     t1.anchor.set(0.5, 1);
-    t1.x = x + btnW / 2;
-    t1.y = btnY + btnH / 2 + 1;
-    t1.eventMode = 'none';
+    t1.x = x + btnW / 2; t1.y = btnY + btnH / 2 + 1;
     container.addChild(t1);
 
-    const t2 = new Text({
-      text: label2,
-      style: { fontFamily: 'Arial Black, Arial', fontSize: 17, fontWeight: 'bold', fill: '#ffffff' },
-    });
+    const t2 = new Text({ text: label2, style: { fontFamily: 'Arial Black, Arial', fontSize: 17, fontWeight: 'bold', fill: '#ffffff' } });
     t2.anchor.set(0.5, 0);
-    t2.x = x + btnW / 2;
-    t2.y = btnY + btnH / 2 + 2;
-    t2.eventMode = 'none';
+    t2.x = x + btnW / 2; t2.y = btnY + btnH / 2 + 2;
     container.addChild(t2);
   }
 
-  makeBtn(rightStartX, 'Download on the', 'App Store', 0x111111,
-    'https://apps.apple.com/app/dummy-zingplay/id6737778971');
-  makeBtn(rightStartX + btnW + btnGap, 'Get it on', 'Google Play', 0x1a6b1a,
-    'https://play.google.com/store/apps/details?id=th.dm.card.casino');
+  makeBtn(rightStartX, 'Download on the', 'App Store', 0x111111, IOS_URL);
+  makeBtn(rightStartX + btnW + btnGap, 'Get it on', 'Google Play', 0x1a6b1a, ANDROID_URL);
 
-  // Bottom row: search pill — width = 2 buttons + gap
   const pillY = btnY + btnH + innerGap;
   const pillW = totalRightW;
-
-  // White pill background
   const pillBg = new Graphics();
   pillBg.roundRect(rightStartX, pillY, pillW, pillH, pillH / 2);
   pillBg.fill({ color: 0xffffff });
@@ -437,23 +505,15 @@ async function createFooterButtons(gameWidth, gameHeight) {
   pillBg.on('pointerdown', () => openUrl(STORE_URL));
   container.addChild(pillBg);
 
-  // Game name text
   const nameText = new Text({
     text: 'Dummy ZingPlay',
-    style: {
-      fontFamily: 'Arial Black, Arial',
-      fontSize: 16,
-      fontWeight: 'bold',
-      fill: '#CC1010',
-    },
+    style: { fontFamily: 'Arial Black, Arial', fontSize: 16, fontWeight: 'bold', fill: '#CC1010' },
   });
   nameText.anchor.set(0, 0.5);
   nameText.x = rightStartX + 16;
   nameText.y = pillY + pillH / 2;
-  nameText.eventMode = 'none';
   container.addChild(nameText);
 
-  // Red search circle on the right
   const searchR = pillH / 2;
   const searchCx = rightStartX + pillW - searchR;
   const searchCy = pillY + pillH / 2;
@@ -465,7 +525,6 @@ async function createFooterButtons(gameWidth, gameHeight) {
   searchBg.on('pointerdown', () => openUrl(STORE_URL));
   container.addChild(searchBg);
 
-  // Search icon (magnifying glass) drawn with Graphics
   const glass = new Graphics();
   const cx = searchCx - 2;
   const cy = searchCy - 2;
@@ -490,10 +549,8 @@ function fitToScreen(app, container) {
   app.canvas.style.display = 'block';
 }
 
-// MRAID-aware boot: wait for ad container ready before starting the game
 function bootWhenReady() {
   if (typeof mraid === 'undefined') {
-    // No MRAID (dev / web preview) — start immediately
     startGame().catch(console.error);
     return;
   }

@@ -20,6 +20,12 @@ export function createCTAOverlay(width, height) {
   overlay.rect(0, 0, width, height);
   overlay.fill({ color: 0x000000, alpha: 0.75 });
   overlay.eventMode = 'static';
+  overlay.cursor = 'pointer';
+  // Tap anywhere on the overlay backdrop → open store
+  overlay.on('pointerdown', () => {
+    const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
+    openUrl(isIOS ? IOS_URL : ANDROID_URL);
+  });
   container.addChild(overlay);
 
   // CTA card

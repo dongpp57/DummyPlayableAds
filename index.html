@@ -3,17 +3,240 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Dummy Playable Ads</title>
+  <title>Dummy Playable Ads — Scenario Hub</title>
   <style>
     * { margin: 0; padding: 0; box-sizing: border-box; }
-    body { background: #1a1a2e; color: #fff; font-family: Arial Black, Arial, sans-serif; display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 100vh; gap: 20px; }
-    h1 { font-size: 28px; color: #FFD700; }
-    a { display: block; padding: 14px 32px; background: #CC1010; color: #fff; text-decoration: none; border-radius: 10px; font-size: 18px; font-weight: bold; }
-    a:hover { background: #ff2020; }
+    body {
+      background: #1a1a2e;
+      color: #fff;
+      font-family: 'Arial Black', Arial, sans-serif;
+      min-height: 100vh;
+      padding: 40px 20px;
+    }
+    .container { max-width: 1100px; margin: 0 auto; }
+    h1 {
+      font-size: 32px;
+      color: #FFD700;
+      text-align: center;
+      margin-bottom: 8px;
+      letter-spacing: 1px;
+    }
+    .subtitle {
+      text-align: center;
+      color: #888;
+      font-size: 14px;
+      font-weight: normal;
+      margin-bottom: 36px;
+    }
+    .pillar {
+      margin-bottom: 32px;
+      background: #20203a;
+      border-radius: 14px;
+      padding: 22px 24px;
+      border-left: 4px solid #FFD700;
+    }
+    .pillar-title {
+      font-size: 18px;
+      color: #FFD700;
+      margin-bottom: 16px;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+    }
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+      gap: 14px;
+    }
+    .card {
+      background: #2d2d4a;
+      border-radius: 10px;
+      border: 2px solid transparent;
+      padding: 16px 16px 14px;
+      transition: all 0.2s;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+    .card:hover {
+      background: #3a3a5e;
+      border-color: #FFD700;
+      transform: translateY(-2px);
+    }
+    .card-header { min-height: 56px; }
+    .card-id {
+      font-size: 18px;
+      color: #FFD700;
+      margin-bottom: 4px;
+    }
+    .card-name {
+      font-size: 12px;
+      color: #ccc;
+      font-weight: normal;
+      line-height: 1.4;
+    }
+    .badge {
+      display: inline-block;
+      font-size: 10px;
+      padding: 2px 8px;
+      border-radius: 10px;
+      margin-left: 6px;
+      vertical-align: middle;
+      font-weight: normal;
+    }
+    .badge-win { background: #1a6b1a; color: #fff; }
+    .badge-lose { background: #8B0000; color: #fff; }
+    .badge-sort { background: #1f4d8a; color: #fff; }
+    .btn-row {
+      display: flex;
+      gap: 8px;
+    }
+    .btn {
+      flex: 1;
+      padding: 10px 0;
+      border-radius: 8px;
+      text-align: center;
+      text-decoration: none;
+      font-size: 13px;
+      font-weight: bold;
+      cursor: pointer;
+      border: none;
+      font-family: inherit;
+      transition: all 0.15s;
+    }
+    .btn-view {
+      background: #FF6B1A;
+      color: #fff;
+    }
+    .btn-view:hover { background: #ff8533; }
+    .btn-download {
+      background: #3a3a5e;
+      color: #ccc;
+      border: 1px solid #555;
+    }
+    .btn-download:hover {
+      background: #4a4a72;
+      color: #fff;
+      border-color: #FFD700;
+    }
+    .footer {
+      text-align: center;
+      margin-top: 40px;
+      color: #666;
+      font-size: 12px;
+      font-weight: normal;
+    }
   </style>
 </head>
 <body>
-  <h1>Dummy Playable Ads</h1>
-  <a href="/index-1-1.html">Scenario 1-1</a>
+  <div class="container">
+    <h1>Dummy Playable Ads</h1>
+    <div class="subtitle">Scenario Hub — 640 × 1136 portrait, 20s timer</div>
+
+    <div class="pillar">
+      <div class="pillar-title">Pillar 1 · Score Reward / Penalty Moments</div>
+      <div class="grid" id="pillar-1"></div>
+    </div>
+
+    <div class="pillar">
+      <div class="pillar-title">Pillar 2 · Action Variety</div>
+      <div class="grid" id="pillar-2"></div>
+    </div>
+
+    <div class="pillar">
+      <div class="pillar-title">Pillar 3 · Card Sorting</div>
+      <div class="grid" id="pillar-3"></div>
+    </div>
+
+    <div class="pillar">
+      <div class="pillar-title">Legacy</div>
+      <div class="grid" id="pillar-legacy"></div>
+    </div>
+
+    <div class="footer">
+      Dummy ZingPlay Thailand · Built with PixiJS v8 + Vite
+    </div>
+  </div>
+
+  <script>
+    const SCENARIOS = {
+      'pillar-1': [
+        { id: 's1-v1',  name: 'Win: Grab the open card (+50)',             badge: 'win',  badgeText: 'WIN' },
+        { id: 's2a-v1', name: 'Pain: Free-tap, opponent grabs open (-50)', badge: 'lose', badgeText: 'LOSE' },
+        { id: 's2b-v1', name: 'Watch the trap: Auto-play warning',         badge: 'lose', badgeText: 'DEMO' },
+        { id: 's3-v1',  name: 'Win: Grab the Spe-to (+50)',                badge: 'win',  badgeText: 'WIN' },
+      ],
+      'pillar-2': [
+        { id: 's4-v1',  name: 'Win: Grab + knock instantly',               badge: 'win',  badgeText: 'WIN' },
+        { id: 's5a-v1', name: 'Pain: Opponent grabs + knock (-50)',        badge: 'lose', badgeText: 'LOSE' },
+        { id: 's6-v1',  name: 'Win: Grab 1 meld → lay off all cards',      badge: 'win',  badgeText: 'WIN' },
+      ],
+      'pillar-3': [
+        { id: 's7-v1', name: 'Sort cards into 2 valid melds (drag)',       badge: 'sort', badgeText: 'SORT' },
+        { id: 's8-v1', name: 'Sort beautiful hand → instant win',          badge: 'sort', badgeText: 'SORT' },
+        { id: 's9-v1', name: 'Deduce: Pick the right card → multi-meld',   badge: 'sort', badgeText: 'SORT' },
+      ],
+      'pillar-legacy': [
+        { id: '1-1', name: 'Original sort prototype', badge: 'sort', badgeText: 'PROTO' },
+      ],
+    };
+
+    function el(tag, opts = {}) {
+      const node = document.createElement(tag);
+      if (opts.className) node.className = opts.className;
+      if (opts.text != null) node.textContent = opts.text;
+      if (opts.href != null) node.setAttribute('href', opts.href);
+      if (opts.target) node.setAttribute('target', opts.target);
+      if (opts.rel) node.setAttribute('rel', opts.rel);
+      if (opts.download != null) node.setAttribute('download', opts.download);
+      return node;
+    }
+
+    function renderCard(s) {
+      const sourceHref = 'dist/index-' + s.id + '.html';
+      const distHref   = 'dist/index-' + s.id + '.html';
+      const filename   = 'dummy-playable-' + s.id + '.html';
+
+      const card = el('div', { className: 'card' });
+
+      const header = el('div', { className: 'card-header' });
+      const idLine = el('div', { className: 'card-id', text: s.id.toUpperCase() + ' ' });
+      const badge = el('span', { className: 'badge badge-' + s.badge, text: s.badgeText });
+      idLine.appendChild(badge);
+      const nameLine = el('div', { className: 'card-name', text: s.name });
+      header.appendChild(idLine);
+      header.appendChild(nameLine);
+
+      const btnRow = el('div', { className: 'btn-row' });
+      const viewBtn = el('a', {
+        className: 'btn btn-view',
+        text: 'View',
+        href: sourceHref,
+        target: '_blank',
+        rel: 'noopener',
+      });
+      const downloadBtn = el('a', {
+        className: 'btn btn-download',
+        text: 'Download',
+        href: distHref,
+        download: filename,
+      });
+      btnRow.appendChild(viewBtn);
+      btnRow.appendChild(downloadBtn);
+
+      card.appendChild(header);
+      card.appendChild(btnRow);
+      return card;
+    }
+
+    Object.entries(SCENARIOS).forEach(function (entry) {
+      const pillarId = entry[0];
+      const items = entry[1];
+      const grid = document.getElementById(pillarId);
+      if (!grid) return;
+      items.forEach(function (s) {
+        grid.appendChild(renderCard(s));
+      });
+    });
+  </script>
 </body>
 </html>

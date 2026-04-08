@@ -1,31 +1,35 @@
 /**
- * Card rendering using real sprite images from composed cards
+ * Card rendering using real sprite images from composed cards.
+ *
+ * Each scenario imports only the card image URLs it needs and registers
+ * them via `registerCardTexture(key, url)` BEFORE calling `preloadCardTextures()`.
+ * This lets Vite tree-shake the bundle down to only the cards used.
  */
-import { Sprite, Texture, Container, Graphics, Assets } from 'pixi.js';
+import { Sprite, Container, Graphics, Assets } from 'pixi.js';
 
 export const CARD_WIDTH = 96;
 export const CARD_HEIGHT = 135;
 const CARD_RADIUS = 8;
 
-// Import all composed card images via Vite glob
-const cardImageModules = import.meta.glob('../res/common/composed/*.webp', {
-  eager: true,
-  query: '?url',
-  import: 'default',
-});
+// Scenario-supplied map: "value_suit" → URL (base64 inlined by Vite)
+const registeredCardUrls = {};
 
-// Build a lookup: "2_spades" -> url
-const cardImageUrls = {};
-for (const [path, url] of Object.entries(cardImageModules)) {
-  const filename = path.split('/').pop().replace('.webp', '');
-  cardImageUrls[filename] = url;
+/**
+ * Register a card image URL for a given key.
+ * Called by each scenario's main file for the cards it needs.
+ * @param {string} key e.g. '7_hearts'
+ * @param {string} url imported asset URL
+ */
+export function registerCardTexture(key, url) {
+  registeredCardUrls[key] = url;
 }
 
 /**
- * Preload all card textures
+ * Preload all registered card textures.
+ * Must be called AFTER scenario has registered its cards.
  */
 export async function preloadCardTextures() {
-  const entries = Object.entries(cardImageUrls);
+  const entries = Object.entries(registeredCardUrls);
   for (const [key, url] of entries) {
     await Assets.load({ alias: `card_${key}`, src: url });
   }
@@ -49,7 +53,6 @@ export function createCardSprite(cardData) {
     sprite.height = CARD_HEIGHT;
     container.addChild(sprite);
   } else {
-    // Fallback: white card
     const bg = new Graphics();
     bg.roundRect(0, 0, CARD_WIDTH, CARD_HEIGHT, CARD_RADIUS);
     bg.fill({ color: 0xffffff });
@@ -57,12 +60,10 @@ export function createCardSprite(cardData) {
     container.addChild(bg);
   }
 
-  // Highlight overlay (hidden by default)
   const highlight = new Graphics();
   container.addChild(highlight);
   container._highlight = highlight;
 
-  // Make interactive
   container.eventMode = 'static';
   container.cursor = 'pointer';
 

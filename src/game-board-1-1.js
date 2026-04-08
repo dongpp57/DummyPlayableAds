@@ -18,9 +18,9 @@ const TOTAL_W = EFFECTIVE_W * 9 + SCALED_W; // 9 gaps + 1 full last card
  * color: null means no highlight (Deadwood).
  */
 export const GROUPS = [
-  { name: 'Set',      slotIndices: [0, 1, 2],       color: 0x2ECC40, alpha: 0.35 },
-  { name: 'Run',      slotIndices: [3, 4, 5, 6, 7], color: 0x0074D9, alpha: 0.35 },
-  { name: 'Deadwood', slotIndices: [8, 9],           color: null,     alpha: 0 },
+  { name: 'Set',      slotIndices: [0, 1, 2],       color: 0x2ECC40, alpha: 0.5 },
+  { name: 'Run',      slotIndices: [3, 4, 5, 6, 7], color: 0x0074D9, alpha: 0.5 },
+  { name: 'Deadwood', slotIndices: [8, 9],          color: null,     alpha: 0 },
 ];
 
 /**
@@ -55,12 +55,23 @@ export function createGroupHighlights(slots) {
     if (group.color !== null) {
       const firstSlot = slots[group.slotIndices[0]];
       const lastSlot  = slots[group.slotIndices[group.slotIndices.length - 1]];
-      const x = firstSlot.x - 8;
-      const y = firstSlot.y - 8;
-      const w = lastSlot.x + SCALED_W - firstSlot.x + 16;
-      const h = SCALED_H + 16;
+      const pad = 10;
+      const x = firstSlot.x - pad;
+      const y = firstSlot.y - pad;
+      const w = lastSlot.x + SCALED_W - firstSlot.x + pad * 2;
+      const h = SCALED_H + pad * 2;
+
+      // Outer glow (softer, thicker)
+      g.roundRect(x - 3, y - 3, w + 6, h + 6, 18);
+      g.stroke({ color: group.color, width: 6, alpha: 0.35 });
+
+      // Filled background
       g.roundRect(x, y, w, h, 14);
       g.fill({ color: group.color, alpha: group.alpha });
+
+      // Solid bright border
+      g.roundRect(x, y, w, h, 14);
+      g.stroke({ color: group.color, width: 4, alpha: 1 });
     }
 
     return g;
