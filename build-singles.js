@@ -1,13 +1,17 @@
 import { build } from 'vite';
 import { viteSingleFile } from 'vite-plugin-singlefile';
 import { resolve } from 'path';
-import { mkdirSync } from 'fs';
+import { mkdirSync, readdirSync } from 'fs';
 
-const scenarios = [
-  '1-1',
-];
+// Auto-discover all index-*.html scenarios (legacy numeric + sX-vN pattern)
+const scenarios = readdirSync('.')
+  .filter((f) => /^index-[\w-]+\.html$/.test(f) && f !== 'index.html')
+  .map((f) => f.replace(/^index-/, '').replace(/\.html$/, ''));
 
-const outDir = resolve(process.cwd(), 'dist-deploy/downloads');
+console.log(`Found ${scenarios.length} scenarios:`, scenarios.join(', '));
+
+// Output to dist-deploy/dist/ so hub links (href="dist/index-*.html") work on Vercel
+const outDir = resolve(process.cwd(), 'dist-deploy/dist');
 mkdirSync(outDir, { recursive: true });
 
 for (const id of scenarios) {
@@ -27,4 +31,4 @@ for (const id of scenarios) {
   });
 }
 
-console.log('All single-file builds complete!');
+console.log(`All ${scenarios.length} single-file builds complete!`);
