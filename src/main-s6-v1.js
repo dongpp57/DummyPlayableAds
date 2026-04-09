@@ -24,6 +24,7 @@ import imgHandUrl from '../res/style-1/img_hand.webp?url';
 import imgHeaderUrl from '../res/style-1/img_header.webp?url';
 import slotWhiteUrl from '../res/style-1/slot_white.webp?url';
 import rummyBannerUrl from '../res/DummyAsset/Rummy.webp?url';
+import rummyBgUrl from '../res/DummyAsset/bgRummy.webp?url';
 import knockBannerUrl from '../res/DummyAsset/Knock eng.webp?url';
 import knockBtnUrl from '../res/DummyAsset/Btn Knock Idle E.webp?url';
 import btnMeldUrl from '../res/DummyAsset/Btn Meld.png?url';
@@ -1371,6 +1372,21 @@ async function showKnockBanner(app) {
 
 async function showRummyBanner(app) {
   try {
+    // Dark backdrop behind the banner so it pops out
+    const bgTex = await Assets.load(rummyBgUrl);
+    const backdrop = new Sprite(bgTex);
+    backdrop.width = 640;
+    backdrop.height = 1136;
+    backdrop.alpha = 0;
+    app.stage.addChild(backdrop);
+    const bdStart = Date.now();
+    const bdFadeIn = () => {
+      const t = Math.min((Date.now() - bdStart) / 300, 1);
+      backdrop.alpha = t * 0.75;
+      if (t < 1) requestAnimationFrame(bdFadeIn);
+    };
+    requestAnimationFrame(bdFadeIn);
+
     const tex = await Assets.load(rummyBannerUrl);
     const banner = new Sprite(tex);
     banner.anchor.set(0.5);

@@ -17,6 +17,7 @@ import imgHandUrl from '../res/style-1/img_hand.webp?url';
 import imgHeaderUrl from '../res/style-1/img_header.webp?url';
 import slotWhiteUrl from '../res/style-1/slot_white.webp?url';
 import rummyBannerUrl from '../res/DummyAsset/Rummy.webp?url';
+import rummyBgUrl from '../res/DummyAsset/bgRummy.webp?url';
 
 import {
   getInitialHand, getBotMeld,
@@ -620,6 +621,21 @@ async function startGame() {
 
   async function showRummyBanner() {
     try {
+      // Dark backdrop behind the banner so it pops out
+      const bgTex = await Assets.load(rummyBgUrl);
+      const backdrop = new Sprite(bgTex);
+      backdrop.width = GAME_WIDTH;
+      backdrop.height = GAME_HEIGHT;
+      backdrop.alpha = 0;
+      app.stage.addChild(backdrop);
+      const bdStart = Date.now();
+      const bdFadeIn = () => {
+        const t = Math.min((Date.now() - bdStart) / 300, 1);
+        backdrop.alpha = t * 0.75;
+        if (t < 1) requestAnimationFrame(bdFadeIn);
+      };
+      requestAnimationFrame(bdFadeIn);
+
       const tex = await Assets.load(rummyBannerUrl);
       const banner = new Sprite(tex);
       banner.anchor.set(0.5);

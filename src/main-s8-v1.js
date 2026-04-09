@@ -14,6 +14,7 @@ import imgHandUrl from '../res/style-1/img_hand.webp?url';
 import imgHeaderUrl from '../res/style-1/img_header.webp?url';
 import slotWhiteUrl from '../res/style-1/slot_white.webp?url';
 import rummyBannerUrl from '../res/DummyAsset/Rummy.webp?url';
+import rummyBgUrl from '../res/DummyAsset/bgRummy.webp?url';
 
 import { getInitialHand, getBotHand } from './card-data-s8-v1.js';
 import { computeHandSlots, computeBotSlots, CARD_SCALE, BOT_CARD_SCALE, SCALED_W, SCALED_H, RUN_COLOR, SET_COLOR } from './game-board-s8-v1.js';
@@ -345,6 +346,25 @@ async function startGame() {
 
   async function showRummyBanner() {
     try {
+      // 1. Full-screen dark backdrop (bgRummy) — fade in first
+      const bgTex = await Assets.load(rummyBgUrl);
+      const backdrop = new Sprite(bgTex);
+      backdrop.width = GAME_WIDTH;
+      backdrop.height = GAME_HEIGHT;
+      backdrop.x = 0;
+      backdrop.y = 0;
+      backdrop.alpha = 0;
+      app.stage.addChild(backdrop);
+      // Fade in the backdrop to 0.75
+      const bdStart = Date.now();
+      const bdFadeIn = () => {
+        const t = Math.min((Date.now() - bdStart) / 300, 1);
+        backdrop.alpha = t * 0.75;
+        if (t < 1) requestAnimationFrame(bdFadeIn);
+      };
+      requestAnimationFrame(bdFadeIn);
+
+      // 2. Rummy banner pops on top of the backdrop
       const tex = await Assets.load(rummyBannerUrl);
       const banner = new Sprite(tex);
       banner.anchor.set(0.5);
