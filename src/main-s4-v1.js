@@ -43,6 +43,13 @@ import { createTopBar, createTitle, createProgressSection, createTimer, updateTi
 import { createCTAOverlay } from './cta-overlay.js';
 import { createChipRain } from './chip-rain.js';
 import { openUrl } from './open-store.js';
+import { loadSounds, play, setMuted, isMuted, unlock as unlockAudio } from './sound.js';
+
+// Sound assets
+import sfxCardUrl from '../res/sound/s_card.mp3?url';
+import sfxDealUrl from '../res/sound/s_g_deal_card.mp3?url';
+import sfxCoinUrl from '../res/sound/s_coin_falling.mp3?url';
+import sfxProcessUrl from '../res/sound/s_process.mp3?url';
 
 // S4 cards: 5♣ 6♣ Q♥ 8♣ (hand) + 3♠ 4♠ 5♠ (player meld) + 9♥ 10♥ J♥ (opp meld) + 7♣ (discard) + A♦ (open) = 12
 import card5clubs from '../res/common/composed/5_clubs.webp?url';
@@ -120,6 +127,40 @@ async function startGame() {
   topBar._storeUrl = STORE_URL;
   topBar.y = 40;
   app.stage.addChild(topBar);
+
+  // --- Load sound effects ---
+  await loadSounds({
+    card: sfxCardUrl,
+    deal: sfxDealUrl,
+    coin: sfxCoinUrl,
+    process: sfxProcessUrl,
+  });
+
+  // --- Mute button (top-right, below topbar store row) ---
+  const muteBtn = new Container();
+  const muteBg = new Graphics();
+  muteBg.circle(0, 0, 22);
+  muteBg.fill({ color: 0x000000, alpha: 0.55 });
+  muteBg.stroke({ color: 0xffffff, width: 2, alpha: 0.8 });
+  muteBtn.addChild(muteBg);
+  const muteIcon = new Text({
+    text: '\uD83D\uDD0A', // 🔊
+    style: { fontFamily: 'Arial', fontSize: 22, fill: '#ffffff' },
+  });
+  muteIcon.anchor.set(0.5);
+  muteBtn.addChild(muteIcon);
+  muteBtn.x = GAME_WIDTH - 35;
+  muteBtn.y = 110;
+  muteBtn.eventMode = 'static';
+  muteBtn.cursor = 'pointer';
+  muteBtn.on('pointerdown', (ev) => {
+    ev.stopPropagation?.();
+    unlockAudio();
+    const newState = !isMuted();
+    setMuted(newState);
+    muteIcon.text = newState ? '\uD83D\uDD07' : '\uD83D\uDD0A'; // 🔇 : 🔊
+  });
+  app.stage.addChild(muteBtn);
 
   const title = createTitle(GAME_WIDTH, 140);
   title.text = 'Grab 7♣ and knock!';
@@ -612,12 +653,16 @@ async function startGame() {
   meldButton.visible = false;
   meldButton.on('pointerdown', () => {
     if (!meldButton._enabled || resolved) return;
+    unlockAudio();
+    play('card');
     runMeldFormation();
   });
 
   // ===================== STEP 1a: Tap 7♣ — brighten all hand cards, show Meld button =====================
   function onDiscardTap() {
     if (resolved || phase !== 1) return;
+    unlockAudio();
+    play('card');
     phase = 1.25; // user must pick meld cards
     discardCard.eventMode = 'none';
     discardGlow.parent?.removeChild(discardGlow);
@@ -701,6 +746,8 @@ async function startGame() {
       return;
     }
 
+    unlockAudio();
+    play('card');
     pickedIdx.add(idx);
     if (pickedIdx.size === 1) clearPointer();
     highlightCard(card, true);
@@ -720,6 +767,7 @@ async function startGame() {
     clearPointer();
     setMeldButtonEnabled(meldButton, false);
     meldButton.visible = false;
+    play('deal'); // meld cards fly to table
 
     // Disable meld cards + clear highlight
     getMeldCards().forEach((c) => {
@@ -785,6 +833,8 @@ async function startGame() {
 
     card.on('pointerdown', (ev) => {
       if (resolved) return;
+      unlockAudio();
+      play('card');
       dragging = true;
       offset.x = card.x - ev.global.x;
       offset.y = card.y - ev.global.y;
@@ -905,6 +955,7 @@ async function startGame() {
     clearPointer();
 
     title.text = 'KNOCK!';
+    play('deal'); // whoosh as the last card flies out
 
     // 8♠ flies down to discard pile (right side of open card A♦)
     const eightSpades = getDiscardHandCard();
@@ -918,8 +969,11 @@ async function startGame() {
     // +600ms: KNOCK banner pop-in
     setTimeout(() => showKnockBanner(app), 600);
 
-    // +1200ms: chip rain (gold falling)
-    setTimeout(() => createChipRain(app, GAME_WIDTH, GAME_HEIGHT), 1200);
+    // +1200ms: chip rain (gold falling) + coin sound
+    setTimeout(() => {
+      createChipRain(app, GAME_WIDTH, GAME_HEIGHT);
+      play('coin', { concurrent: true });
+    }, 1200);
 
     // +3 seconds after knock banner → open store (CTA)
     setTimeout(() => openUrl(STORE_URL), 3600);

@@ -469,45 +469,6 @@ async function startGame() {
     pointerSprite = hand;
   }
 
-  async function createDragHintPointer(sourceCard, targetX, targetY) {
-    clearPointer();
-    const texture = await Assets.load(imgHandUrl);
-    const hand = new Sprite(texture);
-    hand.anchor.set(0.3, 0);
-    hand.scale.x = -1;
-    hand.rotation = Math.PI / 2 + (60 * Math.PI / 180);
-    const startX = sourceCard.x + HAND_SCALED_W / 2 + 20;
-    const startY = sourceCard.y + HAND_SCALED_H + 40;
-    const endX = targetX;
-    const endY = targetY + 40;
-    hand.x = startX; hand.y = startY; hand.alpha = 0;
-    hand.eventMode = 'none'; // let clicks pass through to the card below
-    app.stage.addChild(hand);
-    const pause = 200, move = 900, fadeOut = 200, restPause = 300;
-    const totalCycle = pause + move + fadeOut + restPause;
-    const startTime = Date.now();
-    const tickFn = () => {
-      const elapsed = (Date.now() - startTime) % totalCycle;
-      if (elapsed < pause) {
-        hand.x = startX; hand.y = startY; hand.alpha = 1;
-      } else if (elapsed < pause + move) {
-        const t = (elapsed - pause) / move;
-        const e = t * t * (3 - 2 * t);
-        hand.x = startX + (endX - startX) * e;
-        hand.y = startY + (endY - startY) * e;
-        hand.alpha = 1;
-      } else if (elapsed < pause + move + fadeOut) {
-        const t = (elapsed - pause - move) / fadeOut;
-        hand.x = endX; hand.y = endY; hand.alpha = 1 - t;
-      } else {
-        hand.alpha = 0;
-      }
-    };
-    app.ticker.add(tickFn);
-    hand._tickFn = tickFn;
-    pointerSprite = hand;
-  }
-
   // Drag hint: pointer slides from `from` → `to` (card → meld target), fade, repeat.
   // Used when the user is expected to DRAG a card to a drop zone.
   async function createDragHintPointer(from, to) {

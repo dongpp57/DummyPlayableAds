@@ -3,7 +3,7 @@
  * Pillar: Moment điểm thưởng phạt | Win: Ăn Spe-to (+50)
  * Canvas: 640x1136 | 1v1 layout
  *
- * Spe-to 2♣ (lá vàng đặc biệt) ở center. Player tap A♣ + 3♣ → meld [A♣,2♣,3♣] → +50!
+ * Spe-to Q♠ (lá vàng đặc biệt) ở center. Player tap J♠ + K♠ → meld [J♠,Q♠,K♠] → +50!
  */
 import { Application, Sprite, NineSliceSprite, Assets, Container, Graphics, Text } from 'pixi.js';
 import { initDevtools } from '@pixi/devtools';
@@ -131,7 +131,7 @@ async function startGame() {
     app.stage.addChild(back);
   }
 
-  // --- Center zone: deck + open card K♦ + Spe-to 2♣ (opponent just discarded) ---
+  // --- Center zone: deck + open card + Spe-to Q♠ (opponent just discarded, yellow-bg special card) ---
   const centerZone = computeCenterZone(GAME_WIDTH);
   const deckPile = createDeckPile(centerZone.deck.x, centerZone.deck.y);
   app.stage.addChild(deckPile);

@@ -3,8 +3,8 @@
  * Pillar: Sắp xếp bài | Mode: Free Drag — Eureka (2 outcomes)
  * Canvas: 640x1136
  *
- * Hand: 4♥ 5♥ 6♥ 5♦ 5♣ 5♠ 7♥
- * Bot meld on table: 8♥ 9♥ 10♥
+ * Hand: 3♥ 5♥ 4♥ 5♦ 5♣ 5♠ 7♥
+ * Bot meld on table: 6♣ 7♣ 8♣
  *
  * Drag 5♥ → RUN (correct) → chain combo → KNOCK
  * Drag 5♥ → SET  (wrong)  → 3 leftover → REPLAY
