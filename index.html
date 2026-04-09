@@ -176,6 +176,37 @@
       background: rgba(255,255,255,0.06);
       color: var(--zps-text-secondary);
     }
+    .btn-pillar-download {
+      margin-left: auto;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      padding: 6px 12px;
+      background: rgba(255,255,255,0.04);
+      color: var(--zps-text-secondary);
+      border: 1px solid rgba(255,255,255,0.08);
+      border-radius: 8px;
+      font-size: 11px;
+      font-weight: 700;
+      font-family: inherit;
+      cursor: pointer;
+      transition: all 0.2s var(--ease-smooth);
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+    }
+    .btn-pillar-download:hover {
+      background: rgba(245,166,35,0.12);
+      border-color: rgba(245,166,35,0.4);
+      color: var(--zps-brand-orange);
+    }
+    .btn-pillar-download:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
+    .btn-pillar-download svg {
+      width: 12px;
+      height: 12px;
+    }
 
     .grid {
       display: grid;
@@ -394,6 +425,10 @@
         <div class="pillar-bar"></div>
         <div class="pillar-title">Pillar 1 · Score Reward / Penalty</div>
         <div class="pillar-count" id="count-1">0</div>
+        <button class="btn-pillar-download" data-pillar="pillar-1" data-name="pillar-1-score-penalty">
+          <svg viewBox="0 0 24 24" fill="none"><path d="M12 3v12m0 0l-4-4m4 4l4-4" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/><path d="M3 17v2a2 2 0 002 2h14a2 2 0 002-2v-2" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          Download zip
+        </button>
       </div>
       <div class="grid" id="pillar-1"></div>
     </section>
@@ -403,6 +438,10 @@
         <div class="pillar-bar"></div>
         <div class="pillar-title">Pillar 2 · Action Variety</div>
         <div class="pillar-count" id="count-2">0</div>
+        <button class="btn-pillar-download" data-pillar="pillar-2" data-name="pillar-2-action-variety">
+          <svg viewBox="0 0 24 24" fill="none"><path d="M12 3v12m0 0l-4-4m4 4l4-4" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/><path d="M3 17v2a2 2 0 002 2h14a2 2 0 002-2v-2" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          Download zip
+        </button>
       </div>
       <div class="grid" id="pillar-2"></div>
     </section>
@@ -412,6 +451,10 @@
         <div class="pillar-bar"></div>
         <div class="pillar-title">Pillar 3 · Card Sorting</div>
         <div class="pillar-count" id="count-3">0</div>
+        <button class="btn-pillar-download" data-pillar="pillar-3" data-name="pillar-3-card-sorting">
+          <svg viewBox="0 0 24 24" fill="none"><path d="M12 3v12m0 0l-4-4m4 4l4-4" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/><path d="M3 17v2a2 2 0 002 2h14a2 2 0 002-2v-2" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          Download zip
+        </button>
       </div>
       <div class="grid" id="pillar-3"></div>
     </section>
@@ -421,6 +464,10 @@
         <div class="pillar-bar"></div>
         <div class="pillar-title">Legacy</div>
         <div class="pillar-count" id="count-legacy">0</div>
+        <button class="btn-pillar-download" data-pillar="pillar-legacy" data-name="pillar-legacy">
+          <svg viewBox="0 0 24 24" fill="none"><path d="M12 3v12m0 0l-4-4m4 4l4-4" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/><path d="M3 17v2a2 2 0 002 2h14a2 2 0 002-2v-2" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          Download zip
+        </button>
       </div>
       <div class="grid" id="pillar-legacy"></div>
     </section>
@@ -537,26 +584,23 @@
       });
     }
 
-    const downloadAllBtn = document.getElementById('downloadAllBtn');
-    downloadAllBtn.addEventListener('click', async function () {
-      const allScenarios = [].concat(
-        SCENARIOS['pillar-1'],
-        SCENARIOS['pillar-2'],
-        SCENARIOS['pillar-3'],
-        SCENARIOS['pillar-legacy']
-      );
-
-      downloadAllBtn.disabled = true;
+    /**
+     * Shared zip builder used by both "Download All" and per-pillar buttons.
+     * scenarios: array of scenario objects
+     * folderName: both the zip folder name and the output file name stem
+     * triggerBtn: button to disable during download
+     */
+    async function downloadScenariosAsZip(scenarios, folderName, triggerBtn) {
+      if (triggerBtn) triggerBtn.disabled = true;
       showToast('Loading ZIP library...');
-
       try {
         const JSZip = await loadJSZip();
         const zip = new JSZip();
-        const folder = zip.folder('dummy-playable-ads');
+        const folder = zip.folder(folderName);
 
-        for (let i = 0; i < allScenarios.length; i++) {
-          const s = allScenarios[i];
-          showToast('Fetching ' + (i + 1) + '/' + allScenarios.length + '  ·  ' + s.id);
+        for (let i = 0; i < scenarios.length; i++) {
+          const s = scenarios[i];
+          showToast('Fetching ' + (i + 1) + '/' + scenarios.length + '  ·  ' + s.id);
           const url = 'dist/index-' + s.id + '.html';
           try {
             const res = await fetch(url);
@@ -578,21 +622,44 @@
         const url = URL.createObjectURL(blob);
         const a = document.createElement('a');
         a.href = url;
-        a.download = 'dummy-playable-ads.zip';
+        a.download = folderName + '.zip';
         document.body.appendChild(a);
         a.click();
         document.body.removeChild(a);
         URL.revokeObjectURL(url);
 
-        showToast('Done · ' + allScenarios.length + ' files zipped');
+        showToast('Done · ' + scenarios.length + ' files zipped');
         hideToast(2200);
       } catch (e) {
         console.error(e);
         showToast('Error: ' + e.message);
         hideToast(3000);
       } finally {
-        downloadAllBtn.disabled = false;
+        if (triggerBtn) triggerBtn.disabled = false;
       }
+    }
+
+    // ===== Download All =====
+    const downloadAllBtn = document.getElementById('downloadAllBtn');
+    downloadAllBtn.addEventListener('click', function () {
+      const allScenarios = [].concat(
+        SCENARIOS['pillar-1'],
+        SCENARIOS['pillar-2'],
+        SCENARIOS['pillar-3'],
+        SCENARIOS['pillar-legacy']
+      );
+      downloadScenariosAsZip(allScenarios, 'dummy-playable-ads', downloadAllBtn);
+    });
+
+    // ===== Per-pillar Download =====
+    document.querySelectorAll('.btn-pillar-download').forEach(function (btn) {
+      btn.addEventListener('click', function () {
+        const pillarId = btn.getAttribute('data-pillar');
+        const folderName = btn.getAttribute('data-name') || pillarId;
+        const items = SCENARIOS[pillarId] || [];
+        if (items.length === 0) return;
+        downloadScenariosAsZip(items, folderName, btn);
+      });
     });
   </script>
 </body>
