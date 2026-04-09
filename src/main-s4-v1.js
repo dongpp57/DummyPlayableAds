@@ -1019,6 +1019,21 @@ function spawnFloatingScore(app, text, x, y, fillColor, strokeColor) {
 
 async function showKnockBanner(app) {
   try {
+    // Dark backdrop behind the banner so it pops out
+    const bgTex = await Assets.load(rummyBgUrl);
+    const backdrop = new Sprite(bgTex);
+    backdrop.width = 640;
+    backdrop.height = 1136;
+    backdrop.alpha = 0;
+    app.stage.addChild(backdrop);
+    const bdStart = Date.now();
+    const bdFadeIn = () => {
+      const t = Math.min((Date.now() - bdStart) / 300, 1);
+      backdrop.alpha = t * 0.75;
+      if (t < 1) requestAnimationFrame(bdFadeIn);
+    };
+    requestAnimationFrame(bdFadeIn);
+
     const tex = await Assets.load(knockBannerUrl);
     const banner = new Sprite(tex);
     banner.anchor.set(0.5);

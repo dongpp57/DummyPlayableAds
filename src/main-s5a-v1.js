@@ -19,6 +19,7 @@ import slotWhiteUrl from '../res/style-1/slot_white.webp?url';
 import potDoiThuUrl from '../res/DummyAsset/Pot doi thu.webp?url';
 import btnDiscardUrl from '../res/DummyAsset/Btn Discard E.webp?url';
 import knockBannerUrl from '../res/DummyAsset/Knock eng.webp?url';
+import rummyBgUrl from '../res/DummyAsset/bgRummy.webp?url';
 import {
   getPlayerHand, getPlayerExistingMeld, getCayMo,
   getOpponentExistingMelds, getOpponentLurk9, getOpponentLurkJ,
@@ -744,6 +745,21 @@ async function startGame() {
         // After 1100ms: show KNOCK banner near top
         setTimeout(async () => {
           try {
+            // Dark backdrop behind the banner so it pops out
+            const bgTex = await Assets.load(rummyBgUrl);
+            const backdrop = new Sprite(bgTex);
+            backdrop.width = GAME_WIDTH;
+            backdrop.height = GAME_HEIGHT;
+            backdrop.alpha = 0;
+            app.stage.addChild(backdrop);
+            const bdStart = Date.now();
+            const bdFadeIn = () => {
+              const t = Math.min((Date.now() - bdStart) / 300, 1);
+              backdrop.alpha = t * 0.75;
+              if (t < 1) requestAnimationFrame(bdFadeIn);
+            };
+            requestAnimationFrame(bdFadeIn);
+
             const potTex = await Assets.load(knockBannerUrl);
             const potBanner = new Sprite(potTex);
             const targetW = 320;
