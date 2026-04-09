@@ -535,13 +535,13 @@ async function startGame() {
           try {
             const potTex = await Assets.load(potDoiThuUrl);
             const potBanner = new Sprite(potTex);
-            const targetW = 320;
+            const targetW = 260;
             const ratio = targetW / potTex.width;
             potBanner.width = targetW;
             potBanner.height = potTex.height * ratio;
             potBanner.anchor.set(0.5);
-            potBanner.x = GAME_WIDTH / 2;
-            potBanner.y = 200;
+            potBanner.x = 140;
+            potBanner.y = 430;
             potBanner.scale.set(0);
             app.stage.addChild(potBanner);
 

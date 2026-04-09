@@ -1,8 +1,10 @@
 /**
  * Main entry — Dummy Playable Ad Scenario S8 V1
- * Pillar: Sắp xếp bài | Mode: Single-Tap SORT → Instant Win Reveal
+ * Pillar: Sắp xếp bài | Mode: Free Drag → Auto-detect 2 valid melds → Instant Win
  * Canvas: 640x1136
- * Hand 7 lá lộn xộn, tap SORT → fly animation → Run + Set + 1 deadwood K♥ → INSTANT WIN.
+ * Hand 7 lá lộn xộn. User tự kéo-thả để hoán đổi vị trí. Khi hand có 2 nhóm
+ * liền nhau tạo thành run/set hợp lệ (3+ lá mỗi nhóm) → auto fly meld down +
+ * RUMMY banner + chip rain → INSTANT WIN.
  */
 import { Application, Sprite, NineSliceSprite, Assets, Container, Graphics, Text } from 'pixi.js';
 import { initDevtools } from '@pixi/devtools';
@@ -13,8 +15,9 @@ import imgHeaderUrl from '../res/style-1/img_header.webp?url';
 import slotWhiteUrl from '../res/style-1/slot_white.webp?url';
 import rummyBannerUrl from '../res/DummyAsset/Rummy.webp?url';
 
-import { getInitialHand, getBotHand, SORT_TARGET_SLOTS, RUN_SLOTS, SET_SLOTS, DEADWOOD_SLOT } from './card-data-s8-v1.js';
-import { computeHandSlots, computeBotSlots, createGroupHighlights, CARD_SCALE, BOT_CARD_SCALE, SCALED_W, SCALED_H } from './game-board-s8-v1.js';
+import { getInitialHand, getBotHand } from './card-data-s8-v1.js';
+import { computeHandSlots, computeBotSlots, CARD_SCALE, BOT_CARD_SCALE, SCALED_W, SCALED_H, RUN_COLOR, SET_COLOR } from './game-board-s8-v1.js';
+import { validateHand, findBestHighlightGroups } from './s8-validator.js';
 import { createCardSprite, preloadCardTextures, registerCardTexture, highlightCard, CARD_WIDTH, CARD_HEIGHT } from './card-renderer.js';
 
 // S8: player hand 7 cards + bot hand 7 cards = 14 unique cards
@@ -103,7 +106,7 @@ async function startGame() {
 
   // --- Title ---
   const title = createTitle(GAME_WIDTH, 140);
-  title.text = "Tap SORT to win!";
+  title.text = 'Drag to form 2 melds!';
   app.stage.addChild(title);
   let titleScale = 1, titleGrowing = true;
   app.ticker.add(() => {
@@ -129,51 +132,38 @@ async function startGame() {
   // --- Player hand cards (unsorted initial order) ---
   const handSlots = computeHandSlots(GAME_WIDTH);
   const handData = getInitialHand();
-  // homePos[orig] = initial slot position by orig index
+  // handOrder[slotIdx] = card sprite currently in that slot (mutable by drag)
   const cards = [];
+  const handOrder = []; // reorderable: handOrder[i] = card at slot i
   for (let i = 0; i < handData.length; i++) {
     const card = createCardSprite(handData[i]);
     card.scale.set(CARD_SCALE);
     card.x = handSlots[i].x;
     card.y = handSlots[i].y;
     card._origIdx = i;
-    card.eventMode = 'none';
+    card._data = handData[i];
+    card._slotIdx = i;
+    card.eventMode = 'static';
+    card.cursor = 'grab';
     app.stage.addChild(card);
     cards.push(card);
+    handOrder.push(card);
   }
 
-  // --- Group highlights (hidden initially) ---
-  // Add highlights BEFORE re-adding cards on top, so cards always render above highlights.
-  const [runHl, setHl] = createGroupHighlights(handSlots);
-  app.stage.addChild(runHl);
-  app.stage.addChild(setHl);
-  // Re-add cards in INITIAL slot order (left→right) so left cards render under right cards.
-  // Initial order: cards[0..6] are already in slot 0..6 left-to-right at this point.
-  cards.forEach(c => app.stage.addChild(c));
-
-  /**
-   * Re-stack all cards so left cards render BEHIND right cards (overlap visual).
-   * Call this after every position change so K♥ (which moves to slot 6 = rightmost)
-   * always appears on top of its left neighbours, and 5♥ (slot 2) appears above 4♥ (slot 1), etc.
-   */
+  /** Re-stack cards so left cards render BEHIND right cards (overlap visual). */
   function restackBySlot() {
     const sorted = [...cards].sort((a, b) => a.x - b.x);
-    sorted.forEach(c => app.stage.addChild(c));
+    sorted.forEach((c) => app.stage.addChild(c));
   }
+  restackBySlot();
 
   // --- Timer ---
   const timer = await createTimer(GAME_WIDTH - 75, 600);
   app.stage.addChild(timer);
 
-  // --- SORT button ---
-  const sortBtn = createSortButton(GAME_WIDTH / 2, 600);
-  app.stage.addChild(sortBtn);
-
-  // --- Tutorial hand pointer on SORT button ---
-  let pointerSprite = await createPointerOnButton(app, sortBtn);
-
   let timerInterval;
   let sorted = false;
+  let pointerSprite = null;
 
   function clearPointer() {
     if (pointerSprite) {
@@ -218,106 +208,123 @@ async function startGame() {
     requestAnimationFrame(tick);
   }
 
-  async function doSort() {
+  // Dynamic group highlights drawn on the fly after validation
+  let groupHighlights = [];
+  function drawGroupHighlight(group, color) {
+    const first = handSlots[group.start];
+    const last = handSlots[group.end];
+    const pad = 10;
+    const x = first.x - pad;
+    const y = first.y - pad;
+    const w = last.x + SCALED_W - first.x + pad * 2;
+    const h = SCALED_H + pad * 2;
+    const g = new Graphics();
+    g.roundRect(x - 3, y - 3, w + 6, h + 6, 18);
+    g.stroke({ color, width: 6, alpha: 0.35 });
+    g.roundRect(x, y, w, h, 14);
+    g.fill({ color, alpha: 0.5 });
+    g.roundRect(x, y, w, h, 14);
+    g.stroke({ color, width: 4, alpha: 1 });
+    app.stage.addChild(g);
+    // Cards must render above highlight
+    restackBySlot();
+    groupHighlights.push(g);
+    return g;
+  }
+  function clearGroupHighlights() {
+    groupHighlights.forEach((g) => g.parent?.removeChild(g));
+    groupHighlights = [];
+  }
+
+  /**
+   * Redraw highlights based on current hand order. Called after every drop.
+   * Highlights any valid run/set (1 or 2 groups) so the user sees realtime
+   * feedback as they build their melds.
+   */
+  function refreshHighlights() {
+    clearGroupHighlights();
+    const handDataNow = handOrder.map((c) => c._data);
+    const groups = findBestHighlightGroups(handDataNow);
+    groups.forEach((g) => {
+      drawGroupHighlight(g, g.type === 'run' ? RUN_COLOR : SET_COLOR);
+    });
+  }
+
+  async function triggerWin(groupA, groupB) {
     if (sorted) return;
     sorted = true;
     clearPointer();
-    sortBtn.eventMode = 'none';
-    fadeAlpha(sortBtn, 0, 250);
-    setTimeout(() => sortBtn.parent?.removeChild(sortBtn), 280);
+    // Disable further drag
+    cards.forEach((c) => { c.eventMode = 'none'; c.cursor = 'default'; });
 
-    // Build map: origIdx → target slot index
-    const origToSlot = new Map();
-    SORT_TARGET_SLOTS.forEach((origIdx, slotIdx) => {
-      origToSlot.set(origIdx, slotIdx);
-    });
+    // Phase A: Show highlights based on actual detected groups (clear any realtime ones first)
+    clearGroupHighlights();
+    drawGroupHighlight(groupA, groupA.type === 'run' ? RUN_COLOR : SET_COLOR);
+    drawGroupHighlight(groupB, groupB.type === 'run' ? RUN_COLOR : SET_COLOR);
+    title.text = 'PERFECT HAND!';
+    updateIQ(progressSection, 110);
+    animateProgress(0.2, 1.0, 600);
 
-    // Tween each card to its target slot
-    cards.forEach((card) => {
-      const slotIdx = origToSlot.get(card._origIdx);
-      const slot = handSlots[slotIdx];
-      // Stagger slightly
-      setTimeout(() => tweenTo(card, slot.x, slot.y, 700), slotIdx * 60);
-      // Fade K♥ to 0.5 alpha (deadwood)
-      if (card._origIdx === 0) {
-        setTimeout(() => fadeAlpha(card, 0.5, 600), 700 + slotIdx * 60);
-      }
-    });
-
-    // Phase A: After fly animation → show highlights + restack
+    // Phase B: Meld down — fly the 2 groups to table center
     setTimeout(() => {
-      runHl.visible = true;
-      setHl.visible = true;
-      restackBySlot();
-      title.text = 'PERFECT HAND!';
-      updateIQ(progressSection, 110);
-      animateProgress(0.2, 1.0, 600);
-    }, 1100);
-
-    // Phase B: Meld down — fly Run + Set cards from hand → table center meld zone
-    // Background1 has a horizontal meld zone strip around y=480-570 (middle of canvas).
-    setTimeout(() => {
-      runHl.visible = false;
-      setHl.visible = false;
-      meldDownToTable();
-    }, 2000);
+      clearGroupHighlights();
+      meldDownToTable(groupA, groupB);
+    }, 900);
 
     // Phase C: RUMMY banner pops in
     setTimeout(() => {
       showRummyBanner();
-    }, 3200);
+    }, 2100);
 
     // Phase D: Reveal bot hand + chip rain
     setTimeout(() => {
       revealBotHand(botCards, getBotHand());
       createChipRain(app, GAME_WIDTH, GAME_HEIGHT);
-    }, 3800);
+    }, 2700);
 
     // Stop timer
-    setTimeout(() => clearInterval(timerInterval), 3800);
+    setTimeout(() => clearInterval(timerInterval), 2700);
 
     // Open store
-    setTimeout(() => openUrl(STORE_URL), 5500);
+    setTimeout(() => openUrl(STORE_URL), 4500);
   }
 
-  // --- Meld zone (table center) — fly Run + Set down here ---
+  // --- Meld zone (table center) — fly both groups down here ---
   const MELD_ZONE_Y = 500;
   const MELD_CARD_SCALE = 0.7;
   const MELD_W = CARD_WIDTH * MELD_CARD_SCALE;
 
-  function meldDownToTable() {
-    // Run group: orig 2 (3♥), 6 (4♥), 4 (5♥) — left cluster
-    // Set group: orig 3 (7♣), 1 (7♦), 5 (7♠) — right cluster
-    const runOrigs = [2, 6, 4]; // already in display order 3-4-5
-    const setOrigs = [3, 1, 5]; // 7♣ 7♦ 7♠
+  function meldDownToTable(groupA, groupB) {
+    // Each group uses slots [start..end] from handOrder
+    const groupACards = [];
+    for (let i = groupA.start; i <= groupA.end; i++) groupACards.push(handOrder[i]);
+    const groupBCards = [];
+    for (let i = groupB.start; i <= groupB.end; i++) groupBCards.push(handOrder[i]);
 
     const overlap = 24;
     const eff = MELD_W - overlap;
-    const runTotalW = eff * 2 + MELD_W;
-    const setTotalW = eff * 2 + MELD_W;
+    const groupAW = eff * (groupACards.length - 1) + MELD_W;
+    const groupBW = eff * (groupBCards.length - 1) + MELD_W;
     const gap = 40;
-    const totalW = runTotalW + gap + setTotalW;
+    const totalW = groupAW + gap + groupBW;
     const startX = (GAME_WIDTH - totalW) / 2;
 
-    runOrigs.forEach((origIdx, i) => {
-      const card = cards[origIdx];
+    groupACards.forEach((card, i) => {
       const tx = startX + i * eff;
-      const ty = MELD_ZONE_Y;
       tweenScale(card, MELD_CARD_SCALE, 600);
-      tweenTo(card, tx, ty, 600);
+      tweenTo(card, tx, MELD_ZONE_Y, 600);
+    });
+    groupBCards.forEach((card, i) => {
+      const tx = startX + groupAW + gap + i * eff;
+      tweenScale(card, MELD_CARD_SCALE, 600);
+      tweenTo(card, tx, MELD_ZONE_Y, 600);
     });
 
-    setOrigs.forEach((origIdx, i) => {
-      const card = cards[origIdx];
-      const tx = startX + runTotalW + gap + i * eff;
-      const ty = MELD_ZONE_Y;
-      tweenScale(card, MELD_CARD_SCALE, 600);
-      tweenTo(card, tx, ty, 600);
+    // Dim any remaining deadwood card(s)
+    const meldedSet = new Set([...groupACards, ...groupBCards]);
+    cards.forEach((c) => {
+      if (!meldedSet.has(c)) setTimeout(() => fadeAlpha(c, 0.35, 400), 200);
     });
-
-    // K♥ stays in hand, but shake/dim it to indicate it's leftover
-    const kHeart = cards[0];
-    setTimeout(() => fadeAlpha(kHeart, 0.35, 400), 200);
 
     // After fly: re-stack meld cards left-to-right
     setTimeout(restackBySlot, 700);
@@ -374,8 +381,142 @@ async function startGame() {
     }
   }
 
-  // SORT button click
-  sortBtn.on('pointerdown', doSort);
+  // --- Drag setup: user can drag any card to reorder the hand ---
+  // Stage must be interactive for global pointermove/pointerup to fire
+  app.stage.eventMode = 'static';
+  app.stage.hitArea = app.screen;
+
+  // Shared drag state (only 1 card can be dragged at a time)
+  let draggingCard = null;
+  let dragOffset = { x: 0, y: 0 };
+  let dragOriginalSlot = 0;
+
+  function setupCardDrag(card) {
+    card.on('pointerdown', (ev) => {
+      if (sorted || draggingCard) return;
+      draggingCard = card;
+      dragOriginalSlot = card._slotIdx;
+      const pos = ev.global;
+      dragOffset.x = card.x - pos.x;
+      dragOffset.y = card.y - pos.y;
+      card.cursor = 'grabbing';
+      // Bring this card to front while dragging
+      app.stage.removeChild(card);
+      app.stage.addChild(card);
+      card.alpha = 0.9;
+      clearPointer(); // hide tutorial pointer once user starts interacting
+    });
+  }
+
+  app.stage.on('pointermove', (ev) => {
+    if (!draggingCard) return;
+    draggingCard.x = ev.global.x + dragOffset.x;
+    draggingCard.y = ev.global.y + dragOffset.y;
+  });
+
+  function endDrag() {
+    if (!draggingCard) return;
+    const card = draggingCard;
+    draggingCard = null;
+    card.alpha = 1;
+    card.cursor = 'grab';
+
+    // Find nearest slot based on current card center X
+    const cardCenterX = card.x + SCALED_W / 2;
+    let nearestSlot = 0;
+    let nearestDist = Infinity;
+    handSlots.forEach((slot, i) => {
+      const slotCenterX = slot.x + SCALED_W / 2;
+      const d = Math.abs(cardCenterX - slotCenterX);
+      if (d < nearestDist) {
+        nearestDist = d;
+        nearestSlot = i;
+      }
+    });
+
+    // Reorder handOrder: remove card from originalSlot, insert at nearestSlot
+    if (nearestSlot !== dragOriginalSlot) {
+      handOrder.splice(dragOriginalSlot, 1);
+      handOrder.splice(nearestSlot, 0, card);
+      handOrder.forEach((c, i) => {
+        c._slotIdx = i;
+        tweenTo(c, handSlots[i].x, handSlots[i].y, 250);
+      });
+    } else {
+      tweenTo(card, handSlots[dragOriginalSlot].x, handSlots[dragOriginalSlot].y, 200);
+    }
+
+    // Re-stack z-order after tween settles, refresh highlights, then check win
+    setTimeout(() => {
+      restackBySlot();
+      refreshHighlights();
+      const handDataNow = handOrder.map((c) => c._data);
+      const result = validateHand(handDataNow);
+      if (result) triggerWin(result.groupA, result.groupB);
+    }, 280);
+  }
+
+  app.stage.on('pointerup', endDrag);
+  app.stage.on('pointerupoutside', endDrag);
+
+  cards.forEach(setupCardDrag);
+
+  // --- Tutorial hand pointer: sweep across player hand to hint dragging ---
+  async function createHandSweepPointer() {
+    clearPointer();
+    const texture = await Assets.load(imgHandUrl);
+    const hand = new Sprite(texture);
+    hand.anchor.set(0.3, 0);
+    hand.scale.x = -1;
+    hand.rotation = Math.PI / 2 + (60 * Math.PI / 180);
+
+    const firstCard = handOrder[0];
+    const lastCard = handOrder[handOrder.length - 1];
+    const fromEnd = { x: firstCard.x + SCALED_W / 2 + 20, y: firstCard.y + SCALED_H + 60 };
+    const toEnd   = { x: lastCard.x  + SCALED_W / 2 + 20, y: lastCard.y  + SCALED_H + 60 };
+    const spawn = { x: fromEnd.x + 70, y: fromEnd.y + 70 };
+
+    hand.x = spawn.x;
+    hand.y = spawn.y;
+    hand.alpha = 0;
+    hand.eventMode = 'none';
+    app.stage.addChild(hand);
+
+    const fadeIn  = 350;
+    const sweep   = 1400;
+    const fadeOut = 300;
+    const pause   = 300;
+    const totalCycle = fadeIn + sweep + fadeOut + pause;
+
+    const startTime = Date.now();
+    const tickFn = () => {
+      const elapsed = (Date.now() - startTime) % totalCycle;
+      if (elapsed < fadeIn) {
+        const t = elapsed / fadeIn;
+        const e = t * t * (3 - 2 * t);
+        hand.x = spawn.x + (fromEnd.x - spawn.x) * e;
+        hand.y = spawn.y + (fromEnd.y - spawn.y) * e;
+        hand.alpha = e;
+      } else if (elapsed < fadeIn + sweep) {
+        const t = (elapsed - fadeIn) / sweep;
+        const e = t * t * (3 - 2 * t);
+        hand.x = fromEnd.x + (toEnd.x - fromEnd.x) * e;
+        hand.y = fromEnd.y + (toEnd.y - fromEnd.y) * e;
+        hand.alpha = 1;
+      } else if (elapsed < fadeIn + sweep + fadeOut) {
+        const t = (elapsed - fadeIn - sweep) / fadeOut;
+        hand.x = toEnd.x;
+        hand.y = toEnd.y + t * 6;
+        hand.alpha = 1 - t;
+      } else {
+        hand.alpha = 0;
+      }
+    };
+    app.ticker.add(tickFn);
+    hand._tickFn = tickFn;
+    pointerSprite = hand;
+  }
+  createHandSweepPointer();
 
   // --- Bottom bar ---
   const slotTex = await Assets.load(slotWhiteUrl);
@@ -466,64 +607,6 @@ function revealBotHand(botCards, botHandData) {
       }
     }, i * 80);
   });
-}
-
-function createSortButton(centerX, y) {
-  const btn = new Container();
-  const w = 180, h = 60;
-  const bg = new Graphics();
-  bg.roundRect(-w / 2, -h / 2, w, h, 30);
-  bg.fill({ color: 0xFFD700 });
-  bg.stroke({ color: 0xffffff, width: 3 });
-  btn.addChild(bg);
-
-  const label = new Text({
-    text: 'SORT',
-    style: {
-      fontFamily: 'Arial Black, Arial',
-      fontSize: 32,
-      fontWeight: 'bold',
-      fill: '#1a1a2e',
-      stroke: { color: '#ffffff', width: 2 },
-    },
-  });
-  label.anchor.set(0.5);
-  btn.addChild(label);
-
-  btn.x = centerX;
-  btn.y = y;
-  btn.eventMode = 'static';
-  btn.cursor = 'pointer';
-  return btn;
-}
-
-async function createPointerOnButton(app, btn) {
-  const texture = await Assets.load(imgHandUrl);
-  const hand = new Sprite(texture);
-  // Rotate 180° so fingertip points UP (sprite default points down-left)
-  hand.anchor.set(0.5, 0.5);
-  hand.rotation = Math.PI;
-  hand.scale.x = -1; // flip horizontal → right-hand pointer
-
-  // Place fingertip just BELOW the button (pointing up at SORT label)
-  const ax = btn.x;
-  const ay = btn.y + 80;
-  hand.x = ax;
-  hand.y = ay;
-  hand.eventMode = 'none';
-  app.stage.addChild(hand);
-
-  // Pulse / wiggle animation
-  const startTime = Date.now();
-  const tickFn = () => {
-    const elapsed = Date.now() - startTime;
-    const phase = (elapsed % 1000) / 1000;
-    const offset = Math.sin(phase * Math.PI * 2) * 6;
-    hand.y = ay + offset;
-  };
-  app.ticker.add(tickFn);
-  hand._tickFn = tickFn;
-  return hand;
 }
 
 async function createFooterButtons(gameWidth, gameHeight) {

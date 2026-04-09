@@ -507,6 +507,81 @@ async function startGame() {
     pointerSprite = hand;
   }
 
+  // Drag hint: pointer slides from `from` → `to` (card → meld target), fade, repeat.
+  // Used when the user is expected to DRAG a card to a drop zone.
+  async function createDragHintPointer(from, to) {
+    clearPointer();
+    const texture = await Assets.load(imgHandUrl);
+    const hand = new Sprite(texture);
+    hand.anchor.set(0.3, 0);
+    hand.scale.x = -1;
+    hand.rotation = Math.PI / 2 + (60 * Math.PI / 180);
+
+    // Match the convention used by createSmoothTapPointer elsewhere:
+    // sprite position = (target.x + 20, target.y + 60) makes the fingertip
+    // land roughly ON the target (same rotation/anchor as other pointers).
+    const fromEnd = { x: from.x + 20, y: from.y + 60 };
+    const toEnd   = { x: to.x   + 20, y: to.y   + 60 };
+    // Spawn from below-right of source
+    const spawn = { x: fromEnd.x + 70, y: fromEnd.y + 70 };
+
+    hand.x = spawn.x;
+    hand.y = spawn.y;
+    hand.alpha = 0;
+    hand.eventMode = 'none';
+    app.stage.addChild(hand);
+
+    const fadeIn  = 280;
+    const pickHold = 200; // hold on the card briefly (simulate pick up)
+    const drag    = 900; // slide from card → meld
+    const dropHold = 250; // hold on the meld target
+    const fadeOut = 250;
+    const pause   = 300;
+    const totalCycle = fadeIn + pickHold + drag + dropHold + fadeOut + pause;
+
+    const startTime = Date.now();
+    const tickFn = () => {
+      const elapsed = (Date.now() - startTime) % totalCycle;
+      if (elapsed < fadeIn) {
+        // Slide in from spawn → fromEnd + fade up
+        const t = elapsed / fadeIn;
+        const e = t * t * (3 - 2 * t);
+        hand.x = spawn.x + (fromEnd.x - spawn.x) * e;
+        hand.y = spawn.y + (fromEnd.y - spawn.y) * e;
+        hand.alpha = e;
+      } else if (elapsed < fadeIn + pickHold) {
+        // Sit on the source card
+        hand.x = fromEnd.x;
+        hand.y = fromEnd.y;
+        hand.alpha = 1;
+      } else if (elapsed < fadeIn + pickHold + drag) {
+        // Drag the pointer from source to destination (ease-in-out)
+        const t = (elapsed - fadeIn - pickHold) / drag;
+        const e = t * t * (3 - 2 * t);
+        hand.x = fromEnd.x + (toEnd.x - fromEnd.x) * e;
+        hand.y = fromEnd.y + (toEnd.y - fromEnd.y) * e;
+        hand.alpha = 1;
+      } else if (elapsed < fadeIn + pickHold + drag + dropHold) {
+        // Sit on the drop target
+        hand.x = toEnd.x;
+        hand.y = toEnd.y;
+        hand.alpha = 1;
+      } else if (elapsed < fadeIn + pickHold + drag + dropHold + fadeOut) {
+        // Fade out at the destination
+        const t = (elapsed - fadeIn - pickHold - drag - dropHold) / fadeOut;
+        hand.x = toEnd.x;
+        hand.y = toEnd.y + t * 6;
+        hand.alpha = 1 - t;
+      } else {
+        // Pause (invisible) before next cycle
+        hand.alpha = 0;
+      }
+    };
+    app.ticker.add(tickFn);
+    hand._tickFn = tickFn;
+    pointerSprite = hand;
+  }
+
   // Pointer sweeps horizontally across the whole hand (left → right, loop)
   async function createPointerSweepAcross(handCards) {
     clearPointer();
@@ -807,11 +882,19 @@ async function startGame() {
     const eightHearts = getLayoff8HCard();
     highlightCard(eightHearts, true);
     enableCardDrag(eightHearts, eightHearts._origIdx, 'step2');
-    // Hint with a simple tap pointer on the source card (user pick it up, then drag)
-    createSmoothTapPointer({
-      x: eightHearts.x + HAND_SCALED_W / 2,
-      y: eightHearts.y + HAND_SCALED_H - 20,
-    });
+    // Drag hint: pointer slides from source card UP to OPPONENT MELD (left side).
+    // Target Y is the BOTTOM of the meld so the fingertip lands directly on the meld.
+    const firstOpp = oppMeldCards[0];
+    createDragHintPointer(
+      {
+        x: eightHearts.x + HAND_SCALED_W / 2,
+        y: eightHearts.y + HAND_SCALED_H,
+      },
+      {
+        x: firstOpp.x + MELD_SCALED_W / 2,
+        y: firstOpp.y + MELD_SCALED_H,
+      }
+    );
   }
 
   // ===================== STEP 3: Drag Q♥ → opponent meld (right side) =====================
@@ -819,10 +902,19 @@ async function startGame() {
     const qHeart = getLayoffQHCard();
     highlightCard(qHeart, true);
     enableCardDrag(qHeart, qHeart._origIdx, 'step3');
-    createSmoothTapPointer({
-      x: qHeart.x + HAND_SCALED_W / 2,
-      y: qHeart.y + HAND_SCALED_H - 20,
-    });
+    // Drag hint: pointer slides from source card UP to OPPONENT MELD (right side).
+    // Target Y is the BOTTOM of the meld so the fingertip lands directly on the meld.
+    const lastOpp = oppMeldCards[oppMeldCards.length - 1];
+    createDragHintPointer(
+      {
+        x: qHeart.x + HAND_SCALED_W / 2,
+        y: qHeart.y + HAND_SCALED_H,
+      },
+      {
+        x: lastOpp.x + MELD_SCALED_W / 2,
+        y: lastOpp.y + MELD_SCALED_H,
+      }
+    );
   }
 
   function enableCardDrag(card, origIdx, step) {
