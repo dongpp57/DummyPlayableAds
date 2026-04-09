@@ -5,7 +5,8 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "build": "vite build && SCENARIO=2-2 vite build && SCENARIO=2-3 vite build && SCENARIO=2-4 vite build && SCENARIO=2-5 vite build",
+    "build": "bash build-all.sh",
+    "build:deploy": "vite build --config vite.config.deploy.js && node build-singles.js",
     "preview": "vite preview"
   },
   "keywords": [],

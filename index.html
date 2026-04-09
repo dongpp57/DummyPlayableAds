@@ -281,6 +281,64 @@
     .badge-sort  { background: rgba(74,144,217,0.18);  color: var(--zps-accent-blue); }
     .badge-proto { background: rgba(138,143,168,0.18); color: var(--zps-text-secondary); }
 
+    .badge-wrap {
+      display: flex;
+      gap: 5px;
+      flex-wrap: wrap;
+      justify-content: flex-end;
+    }
+    .badge-bet {
+      font-size: 9px;
+      padding: 3px 7px;
+      border: 1px solid transparent;
+    }
+    .badge-bet-v1 { background: rgba(138,143,168,0.12); color: #aab0c4; border-color: rgba(138,143,168,0.25); }
+    .badge-bet-v2 { background: rgba(74,144,217,0.15); color: var(--zps-accent-blue); border-color: rgba(74,144,217,0.35); }
+    .badge-bet-v3 { background: rgba(245,166,35,0.15); color: var(--zps-brand-orange); border-color: rgba(245,166,35,0.35); }
+    .badge-bet-v4 { background: linear-gradient(135deg, rgba(232,52,26,0.18), rgba(245,166,35,0.18)); color: var(--zps-brand-orange); border-color: rgba(232,52,26,0.4); font-weight: 800; }
+
+    /* ===== Bet filter tabs ===== */
+    .filter-tabs {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin: 0 0 28px;
+      padding: 6px;
+      background: var(--zps-bg-surface);
+      border-radius: 12px;
+      border: 1px solid rgba(255,255,255,0.04);
+      width: fit-content;
+    }
+    .filter-tab {
+      padding: 9px 18px;
+      background: transparent;
+      color: var(--zps-text-secondary);
+      border: none;
+      border-radius: 8px;
+      font-size: 12px;
+      font-weight: 700;
+      font-family: inherit;
+      cursor: pointer;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      transition: all 0.2s var(--ease-smooth);
+      white-space: nowrap;
+    }
+    .filter-tab:hover {
+      color: var(--zps-text-primary);
+      background: rgba(255,255,255,0.04);
+    }
+    .filter-tab.active {
+      background: var(--zps-brand-gradient);
+      color: #fff;
+      box-shadow: 0 4px 12px rgba(232,52,26,0.3);
+    }
+
+    /* Hide cards outside current bet filter */
+    .card.bet-hidden { display: none; }
+    /* Hide empty pillars */
+    .pillar.pillar-empty { display: none; }
+
     .card-name {
       font-size: 13px;
       color: var(--zps-text-secondary);
@@ -417,7 +475,15 @@
   <div class="container">
     <div class="page-header">
       <div class="page-title">Dummy Playable Ads</div>
-      <div class="page-subtitle">11 scenarios · 640 × 1136 portrait · 20s timer · PixiJS v8 + Vite</div>
+      <div class="page-subtitle" id="pageSubtitle">41 scenarios · 640 × 1136 portrait · 20s timer · PixiJS v8 + Vite</div>
+    </div>
+
+    <div class="filter-tabs" id="filterTabs">
+      <button class="filter-tab active" data-bet="all">All bets</button>
+      <button class="filter-tab" data-bet="v1">Low bet</button>
+      <button class="filter-tab" data-bet="v2">Mid bet</button>
+      <button class="filter-tab" data-bet="v3">High bet</button>
+      <button class="filter-tab" data-bet="v4">VIP bet</button>
     </div>
 
     <section class="pillar pillar-1">
@@ -483,25 +549,60 @@
   </div>
 
   <script>
-    const SCENARIOS = {
+    // Base scenarios — each expands to 4 bet-level variants (v1..v4).
+    // Legacy scenarios stay as single entries.
+    const BASE_SCENARIOS = {
       'pillar-1': [
-        { id: 's1-v1',  name: 'Win: Grab the open card (+50)',             badge: 'win',  badgeText: 'WIN' },
-        { id: 's2a-v1', name: 'Pain: Free-tap, opponent grabs open (-50)', badge: 'lose', badgeText: 'LOSE' },
-        { id: 's2b-v1', name: 'Watch the trap: Auto-play warning',         badge: 'demo', badgeText: 'DEMO' },
-        { id: 's3-v1',  name: 'Win: Grab the Spe-to (+50)',                badge: 'win',  badgeText: 'WIN' },
+        { baseId: 's1',  name: 'Win: Grab the open card (+50)',             badge: 'win',  badgeText: 'WIN' },
+        { baseId: 's2a', name: 'Pain: Free-tap, opponent grabs open (-50)', badge: 'lose', badgeText: 'LOSE' },
+        { baseId: 's2b', name: 'Watch the trap: Auto-play warning',         badge: 'demo', badgeText: 'DEMO' },
+        { baseId: 's3',  name: 'Win: Grab the Spe-to (+50)',                badge: 'win',  badgeText: 'WIN' },
       ],
       'pillar-2': [
-        { id: 's4-v1',  name: 'Win: Grab + knock instantly',               badge: 'win',  badgeText: 'WIN' },
-        { id: 's5a-v1', name: 'Pain: Opponent grabs + knock (-50)',        badge: 'lose', badgeText: 'LOSE' },
-        { id: 's6-v1',  name: 'Win: Grab 1 meld → lay off all cards',      badge: 'win',  badgeText: 'WIN' },
+        { baseId: 's4',  name: 'Win: Grab + knock instantly',               badge: 'win',  badgeText: 'WIN' },
+        { baseId: 's5a', name: 'Pain: Opponent grabs + knock (-50)',        badge: 'lose', badgeText: 'LOSE' },
+        { baseId: 's6',  name: 'Win: Grab 1 meld → lay off all cards',      badge: 'win',  badgeText: 'WIN' },
       ],
       'pillar-3': [
-        { id: 's7-v1', name: 'Sort cards into 2 valid melds (drag)',       badge: 'sort', badgeText: 'SORT' },
-        { id: 's8-v1', name: 'Sort beautiful hand → instant win',          badge: 'sort', badgeText: 'SORT' },
-        { id: 's9-v1', name: 'Deduce: Pick the right card → multi-meld',   badge: 'sort', badgeText: 'SORT' },
+        { baseId: 's7', name: 'Sort cards into 2 valid melds (drag)',       badge: 'sort', badgeText: 'SORT' },
+        { baseId: 's8', name: 'Sort beautiful hand → instant win',          badge: 'sort', badgeText: 'SORT' },
+        { baseId: 's9', name: 'Deduce: Pick the right card → multi-meld',   badge: 'sort', badgeText: 'SORT' },
       ],
+    };
+
+    // Bet level metadata — v1..v4 map to Background1..4.webp
+    const BET_LEVELS = [
+      { variant: 'v1', label: 'LOW',  tabLabel: 'Low Bet' },
+      { variant: 'v2', label: 'MID',  tabLabel: 'Mid Bet' },
+      { variant: 'v3', label: 'HIGH', tabLabel: 'High Bet' },
+      { variant: 'v4', label: 'VIP',  tabLabel: 'VIP Bet' },
+    ];
+
+    // Expand each base scenario into 4 variants (one per bet level)
+    function expandPillar(baseItems) {
+      const out = [];
+      baseItems.forEach((base) => {
+        BET_LEVELS.forEach((bet) => {
+          out.push({
+            id: base.baseId + '-' + bet.variant,
+            baseId: base.baseId,
+            bet: bet.variant,
+            betLabel: bet.label,
+            name: base.name,
+            badge: base.badge,
+            badgeText: base.badgeText,
+          });
+        });
+      });
+      return out;
+    }
+
+    const SCENARIOS = {
+      'pillar-1': expandPillar(BASE_SCENARIOS['pillar-1']),
+      'pillar-2': expandPillar(BASE_SCENARIOS['pillar-2']),
+      'pillar-3': expandPillar(BASE_SCENARIOS['pillar-3']),
       'pillar-legacy': [
-        { id: '1-1', name: 'Original sort prototype', badge: 'proto', badgeText: 'PROTO' },
+        { id: '1-1', baseId: '1-1', bet: null, name: 'Original sort prototype', badge: 'proto', badgeText: 'PROTO' },
       ],
     };
 
@@ -535,11 +636,18 @@
       const filename = 'dummy-playable-' + s.id + '.html';
 
       const card = el('div', { className: 'card ' + s.badge });
+      if (s.bet) card.dataset.bet = s.bet;
+      if (s.baseId) card.dataset.baseId = s.baseId;
 
       const header = el('div', { className: 'card-header' });
       const idRow = el('div', { className: 'card-id-row' });
       idRow.appendChild(el('div', { className: 'card-id', text: s.id.toUpperCase() }));
-      idRow.appendChild(el('span', { className: 'badge badge-' + s.badge, text: s.badgeText }));
+      const badgeWrap = el('div', { className: 'badge-wrap' });
+      badgeWrap.appendChild(el('span', { className: 'badge badge-' + s.badge, text: s.badgeText }));
+      if (s.betLabel) {
+        badgeWrap.appendChild(el('span', { className: 'badge badge-bet badge-bet-' + s.bet, text: s.betLabel }));
+      }
+      idRow.appendChild(badgeWrap);
       header.appendChild(idRow);
       header.appendChild(el('div', { className: 'card-name', text: s.name }));
 
@@ -561,6 +669,44 @@
       const countEl = document.getElementById('count-' + pillarId.replace('pillar-', ''));
       if (countEl) countEl.textContent = items.length;
     });
+
+    // ===== Bet level filter =====
+    let currentBetFilter = 'all';
+    function applyBetFilter(filter) {
+      currentBetFilter = filter;
+      document.querySelectorAll('.card').forEach(function (card) {
+        const bet = card.dataset.bet;
+        if (filter === 'all' || !bet) {
+          card.classList.remove('bet-hidden');
+        } else {
+          card.classList.toggle('bet-hidden', bet !== filter);
+        }
+      });
+      // Hide pillars that end up empty
+      document.querySelectorAll('.pillar').forEach(function (pillar) {
+        const grid = pillar.querySelector('.grid');
+        if (!grid) return;
+        const visible = grid.querySelectorAll('.card:not(.bet-hidden)').length;
+        pillar.classList.toggle('pillar-empty', visible === 0);
+      });
+      // Update total count
+      const totalVisible = document.querySelectorAll('.card:not(.bet-hidden)').length;
+      const subtitle = document.getElementById('pageSubtitle');
+      if (subtitle) {
+        subtitle.textContent = totalVisible + ' scenarios · 640 × 1136 portrait · 20s timer · PixiJS v8 + Vite';
+      }
+    }
+
+    document.querySelectorAll('#filterTabs .filter-tab').forEach(function (tab) {
+      tab.addEventListener('click', function () {
+        document.querySelectorAll('#filterTabs .filter-tab').forEach(function (t) {
+          t.classList.remove('active');
+        });
+        tab.classList.add('active');
+        applyBetFilter(tab.getAttribute('data-bet'));
+      });
+    });
+    applyBetFilter('all'); // initial
 
     // ===== Download All as ZIP =====
     const toast = document.getElementById('toast');
@@ -639,26 +785,35 @@
       }
     }
 
+    // Filter scenarios by current bet level (legacy items always included)
+    function filterByCurrentBet(items) {
+      if (currentBetFilter === 'all') return items;
+      return items.filter(function (s) { return !s.bet || s.bet === currentBetFilter; });
+    }
+    function betSuffix() {
+      return currentBetFilter === 'all' ? '' : '-' + currentBetFilter;
+    }
+
     // ===== Download All =====
     const downloadAllBtn = document.getElementById('downloadAllBtn');
     downloadAllBtn.addEventListener('click', function () {
-      const allScenarios = [].concat(
+      const allScenarios = filterByCurrentBet([].concat(
         SCENARIOS['pillar-1'],
         SCENARIOS['pillar-2'],
         SCENARIOS['pillar-3'],
         SCENARIOS['pillar-legacy']
-      );
-      downloadScenariosAsZip(allScenarios, 'dummy-playable-ads', downloadAllBtn);
+      ));
+      downloadScenariosAsZip(allScenarios, 'dummy-playable-ads' + betSuffix(), downloadAllBtn);
     });
 
     // ===== Per-pillar Download =====
     document.querySelectorAll('.btn-pillar-download').forEach(function (btn) {
       btn.addEventListener('click', function () {
         const pillarId = btn.getAttribute('data-pillar');
-        const folderName = btn.getAttribute('data-name') || pillarId;
-        const items = SCENARIOS[pillarId] || [];
+        const baseName = btn.getAttribute('data-name') || pillarId;
+        const items = filterByCurrentBet(SCENARIOS[pillarId] || []);
         if (items.length === 0) return;
-        downloadScenariosAsZip(items, folderName, btn);
+        downloadScenariosAsZip(items, baseName + betSuffix(), btn);
       });
     });
   </script>
