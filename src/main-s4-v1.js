@@ -22,7 +22,7 @@ import imgHandUrl from '../res/style-1/img_hand.webp?url';
 import imgHeaderUrl from '../res/style-1/img_header.webp?url';
 import slotWhiteUrl from '../res/style-1/slot_white.webp?url';
 import rummyBannerUrl from '../res/DummyAsset/Rummy.webp?url';
-import knockBannerUrl from '../res/DummyAsset/Knock E.webp?url';
+import knockBannerUrl from '../res/DummyAsset/Knock eng.webp?url';
 import knockBtnUrl from '../res/DummyAsset/Btn Knock Idle E.webp?url';
 import btnMeldUrl from '../res/DummyAsset/Btn Meld.png?url';
 

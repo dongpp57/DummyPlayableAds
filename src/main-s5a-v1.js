@@ -18,7 +18,7 @@ import imgHeaderUrl from '../res/style-1/img_header.webp?url';
 import slotWhiteUrl from '../res/style-1/slot_white.webp?url';
 import potDoiThuUrl from '../res/DummyAsset/Pot doi thu.webp?url';
 import btnDiscardUrl from '../res/DummyAsset/Btn Discard E.webp?url';
-import knockBannerUrl from '../res/DummyAsset/Knock E.webp?url';
+import knockBannerUrl from '../res/DummyAsset/Knock eng.webp?url';
 import {
   getPlayerHand, getPlayerExistingMeld, getCayMo,
   getOpponentExistingMelds, getOpponentLurk9, getOpponentLurkJ,
