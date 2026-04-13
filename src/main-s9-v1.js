@@ -58,6 +58,10 @@ import { createTopBar, createTitle, createProgressSection, createTimer, updateTi
 import { createCTAOverlay } from './cta-overlay.js';
 import { createChipRain } from './chip-rain.js';
 import { openUrl } from './open-store.js';
+import { loadSounds, play, setMuted, isMuted, unlock as unlockAudio } from './sound.js';
+import sfxCardUrl from '../res/sound/s_card.mp3?url';
+import sfxCoinUrl from '../res/sound/s_coin_falling.mp3?url';
+import sfxProcessUrl from '../res/sound/s_process.mp3?url';
 
 const GAME_WIDTH = 640;
 const GAME_HEIGHT = 1136;
@@ -108,6 +112,33 @@ async function startGame() {
   topBar._storeUrl = STORE_URL;
   topBar.y = 40;
   app.stage.addChild(topBar);
+
+  await loadSounds({ card: sfxCardUrl, coin: sfxCoinUrl, process: sfxProcessUrl });
+
+  const muteBtn = new Container();
+  const muteBg = new Graphics();
+  muteBg.circle(0, 0, 22);
+  muteBg.fill({ color: 0x000000, alpha: 0.55 });
+  muteBg.stroke({ color: 0xffffff, width: 2, alpha: 0.8 });
+  muteBtn.addChild(muteBg);
+  const muteIcon = new Text({
+    text: '\uD83D\uDD0A',
+    style: { fontFamily: 'Arial', fontSize: 22, fill: '#ffffff' },
+  });
+  muteIcon.anchor.set(0.5);
+  muteBtn.addChild(muteIcon);
+  muteBtn.x = GAME_WIDTH - 35;
+  muteBtn.y = 110;
+  muteBtn.eventMode = 'static';
+  muteBtn.cursor = 'pointer';
+  muteBtn.on('pointerdown', (ev) => {
+    ev.stopPropagation?.();
+    unlockAudio();
+    const newState = !isMuted();
+    setMuted(newState);
+    muteIcon.text = newState ? '\uD83D\uDD07' : '\uD83D\uDD0A';
+  });
+  app.stage.addChild(muteBtn);
 
   // --- Title ---
   const title = createTitle(GAME_WIDTH, 140);
@@ -391,6 +422,8 @@ async function startGame() {
 
   fiveHearts.on('pointerdown', (ev) => {
     if (resolved) return;
+    unlockAudio();
+    play('card');
     dragging = true;
     dragOffset.x = fiveHearts.x - ev.global.x;
     dragOffset.y = fiveHearts.y - ev.global.y;
@@ -439,6 +472,7 @@ async function startGame() {
   // --- Correct choice: chain combo to KNOCK ---
   async function handleCorrectChoice() {
     resolved = true;
+    play('process');
     disableDrag();
     clearPointer();
     stopTimer();
@@ -503,7 +537,10 @@ async function startGame() {
     }, 2700);
 
     // +3500ms: chip rain
-    setTimeout(() => createChipRain(app, GAME_WIDTH, GAME_HEIGHT), 3500);
+    setTimeout(() => {
+      play('coin', { concurrent: true });
+      createChipRain(app, GAME_WIDTH, GAME_HEIGHT);
+    }, 3500);
 
     // Open store
     setTimeout(() => openUrl(STORE_URL), 5000);
@@ -512,6 +549,7 @@ async function startGame() {
   // --- Wrong choice: SET with 4 fives, leftover 4♥ 6♥ 7♥ ---
   async function handleWrongChoice() {
     attemptCount++;
+    play('card');
     disableDrag();
     clearPointer();
 

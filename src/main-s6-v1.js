@@ -46,6 +46,10 @@ import { createTopBar, createTitle, createProgressSection, createTimer, updateTi
 import { createCTAOverlay } from './cta-overlay.js';
 import { createChipRain } from './chip-rain.js';
 import { openUrl } from './open-store.js';
+import { loadSounds, play, setMuted, isMuted, unlock as unlockAudio } from './sound.js';
+import sfxCardUrl from '../res/sound/s_card.mp3?url';
+import sfxCoinUrl from '../res/sound/s_coin_falling.mp3?url';
+import sfxProcessUrl from '../res/sound/s_process.mp3?url';
 
 // S6 cards: 4♠ 5♠ 8♥ Q♥ Q♠ (hand) + 2♣ 3♣ 4♣ + 7♦ 8♦ 9♦ (player melds) + 9♥ 10♥ J♥ (opp meld) + 3♦ 4♦ J♣ 6♠ (discards) + 5♣ (open) = 17
 import card4spades   from '../res/common/composed/4_spades.webp?url';
@@ -131,6 +135,33 @@ async function startGame() {
   topBar._storeUrl = STORE_URL;
   topBar.y = 40;
   app.stage.addChild(topBar);
+
+  await loadSounds({ card: sfxCardUrl, coin: sfxCoinUrl, process: sfxProcessUrl });
+
+  const muteBtn = new Container();
+  const muteBg = new Graphics();
+  muteBg.circle(0, 0, 22);
+  muteBg.fill({ color: 0x000000, alpha: 0.55 });
+  muteBg.stroke({ color: 0xffffff, width: 2, alpha: 0.8 });
+  muteBtn.addChild(muteBg);
+  const muteIcon = new Text({
+    text: '\uD83D\uDD0A',
+    style: { fontFamily: 'Arial', fontSize: 22, fill: '#ffffff' },
+  });
+  muteIcon.anchor.set(0.5);
+  muteBtn.addChild(muteIcon);
+  muteBtn.x = GAME_WIDTH - 35;
+  muteBtn.y = 110;
+  muteBtn.eventMode = 'static';
+  muteBtn.cursor = 'pointer';
+  muteBtn.on('pointerdown', (ev) => {
+    ev.stopPropagation?.();
+    unlockAudio();
+    const newState = !isMuted();
+    setMuted(newState);
+    muteIcon.text = newState ? '\uD83D\uDD07' : '\uD83D\uDD0A';
+  });
+  app.stage.addChild(muteBtn);
 
   const title = createTitle(GAME_WIDTH, 140);
   title.text = 'Clear your hand to win!';
@@ -696,6 +727,8 @@ async function startGame() {
   // ===================== STEP 1a: Tap 6♠ — brighten all hand cards, show Meld button =====================
   function onDiscardTap() {
     if (resolved || phase !== 1) return;
+    unlockAudio();
+    play('card');
     phase = 1.25; // user must pick meld cards
     if (discardCard) discardCard.eventMode = 'none';
     removeDiscardGlow();
@@ -778,6 +811,7 @@ async function startGame() {
       return;
     }
 
+    play('card');
     pickedIdx.add(idx);
     if (pickedIdx.size === 1) clearPointer();
     highlightCard(card, true);
@@ -793,6 +827,7 @@ async function startGame() {
   // ===================== STEP 1c: Meld button tapped → form meld =====================
   function runMeldFormation() {
     if (resolved || phase !== 1.25) return;
+    play('process');
     phase = 2;
     clearPointer();
     setMeldButtonEnabled(meldButton, false);
@@ -890,6 +925,8 @@ async function startGame() {
 
     card.on('pointerdown', (ev) => {
       if (resolved) return;
+      unlockAudio();
+      play('card');
       dragging = true;
       offset.x = card.x - ev.global.x;
       offset.y = card.y - ev.global.y;
@@ -960,6 +997,7 @@ async function startGame() {
 
   // Drop 8♥ on the LEFT of opponent meld — shift existing meld right to make space
   function handleEightHeartsDrop(card) {
+    play('process');
     phase = 3;
     clearPointer();
     card.eventMode = 'none';
@@ -1022,6 +1060,7 @@ async function startGame() {
 
   // Drop Q♥ on the RIGHT of opponent meld
   function handleQHeartsDrop(card) {
+    play('process');
     phase = 4;
     clearPointer();
     card.eventMode = 'none';
@@ -1068,6 +1107,7 @@ async function startGame() {
     app.ticker.add(tick);
 
     btn.on('pointerdown', () => {
+      play('card');
       app.ticker.remove(tick);
       btn.parent.removeChild(btn);
       triggerKnock();
@@ -1101,7 +1141,7 @@ async function startGame() {
     setTimeout(() => showKnockBanner(app), 600);
 
     // +1200ms: chip rain (gold falling)
-    setTimeout(() => createChipRain(app, GAME_WIDTH, GAME_HEIGHT), 1200);
+    setTimeout(() => { createChipRain(app, GAME_WIDTH, GAME_HEIGHT); play('coin', { concurrent: true }); }, 1200);
 
     // +5 seconds after knock banner → open store (CTA)
     setTimeout(() => openUrl(STORE_URL), 5000);

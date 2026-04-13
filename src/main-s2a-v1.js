@@ -30,6 +30,10 @@ import { createCardSprite, preloadCardTextures, registerCardTexture, highlightCa
 import { createTopBar, createTitle, createTimer, updateTimerText } from './ui-header.js';
 import { createCTAOverlay } from './cta-overlay.js';
 import { openUrl } from './open-store.js';
+import { loadSounds, play, setMuted, isMuted, unlock as unlockAudio } from './sound.js';
+import sfxCardUrl from '../res/sound/s_card.mp3?url';
+import sfxCoinUrl from '../res/sound/s_coin_falling.mp3?url';
+import sfxProcessUrl from '../res/sound/s_process.mp3?url';
 
 // S2a cards: 2 hand + 3 player meld + 1 cay_mo + 2 bot lurk = 8 unique
 import card5hearts from '../res/common/composed/5_hearts.webp?url';
@@ -98,6 +102,33 @@ async function startGame() {
   topBar._storeUrl = STORE_URL;
   topBar.y = 40;
   app.stage.addChild(topBar);
+
+  await loadSounds({ card: sfxCardUrl, coin: sfxCoinUrl, process: sfxProcessUrl });
+
+  const muteBtn = new Container();
+  const muteBg = new Graphics();
+  muteBg.circle(0, 0, 22);
+  muteBg.fill({ color: 0x000000, alpha: 0.55 });
+  muteBg.stroke({ color: 0xffffff, width: 2, alpha: 0.8 });
+  muteBtn.addChild(muteBg);
+  const muteIcon = new Text({
+    text: '\uD83D\uDD0A',
+    style: { fontFamily: 'Arial', fontSize: 22, fill: '#ffffff' },
+  });
+  muteIcon.anchor.set(0.5);
+  muteBtn.addChild(muteIcon);
+  muteBtn.x = GAME_WIDTH - 35;
+  muteBtn.y = 110;
+  muteBtn.eventMode = 'static';
+  muteBtn.cursor = 'pointer';
+  muteBtn.on('pointerdown', (ev) => {
+    ev.stopPropagation?.();
+    unlockAudio();
+    const newState = !isMuted();
+    setMuted(newState);
+    muteIcon.text = newState ? '\uD83D\uDD07' : '\uD83D\uDD0A';
+  });
+  app.stage.addChild(muteBtn);
 
   // --- Title ---
   const title = createTitle(GAME_WIDTH, 140);
@@ -372,6 +403,8 @@ async function startGame() {
   // --- Tap handler PHASE 0/1: select card to discard (lift) ---
   function onCardTap(card) {
     if (resolved) return;
+    unlockAudio();
+    play('card');
 
     // Re-pick: if user taps the OTHER card while one is already lifted, swap selection
     if (selectedCard && selectedCard !== card) {
@@ -430,6 +463,7 @@ async function startGame() {
     }, 600);
     setTimeout(() => {
       title.text = 'OPPONENT GRABS IT!';
+      play('process');
 
       // Spawn the lurk card (face-up) FROM the bot hand area — reveal moment
       const lurkCard = createCardSprite(lurkData);

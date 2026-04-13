@@ -54,6 +54,10 @@ import { createTopBar, createTitle, createProgressSection, createTimer, updateTi
 import { createCTAOverlay } from './cta-overlay.js';
 import { createChipRain } from './chip-rain.js';
 import { openUrl } from './open-store.js';
+import { loadSounds, play, setMuted, isMuted, unlock as unlockAudio } from './sound.js';
+import sfxCardUrl from '../res/sound/s_card.mp3?url';
+import sfxCoinUrl from '../res/sound/s_coin_falling.mp3?url';
+import sfxProcessUrl from '../res/sound/s_process.mp3?url';
 
 const GAME_WIDTH = 640;
 const GAME_HEIGHT = 1136;
@@ -104,6 +108,33 @@ async function startGame() {
   topBar._storeUrl = STORE_URL;
   topBar.y = 40;
   app.stage.addChild(topBar);
+
+  await loadSounds({ card: sfxCardUrl, coin: sfxCoinUrl, process: sfxProcessUrl });
+
+  const muteBtn = new Container();
+  const muteBg = new Graphics();
+  muteBg.circle(0, 0, 22);
+  muteBg.fill({ color: 0x000000, alpha: 0.55 });
+  muteBg.stroke({ color: 0xffffff, width: 2, alpha: 0.8 });
+  muteBtn.addChild(muteBg);
+  const muteIcon = new Text({
+    text: '\uD83D\uDD0A',
+    style: { fontFamily: 'Arial', fontSize: 22, fill: '#ffffff' },
+  });
+  muteIcon.anchor.set(0.5);
+  muteBtn.addChild(muteIcon);
+  muteBtn.x = GAME_WIDTH - 35;
+  muteBtn.y = 110;
+  muteBtn.eventMode = 'static';
+  muteBtn.cursor = 'pointer';
+  muteBtn.on('pointerdown', (ev) => {
+    ev.stopPropagation?.();
+    unlockAudio();
+    const newState = !isMuted();
+    setMuted(newState);
+    muteIcon.text = newState ? '\uD83D\uDD07' : '\uD83D\uDD0A';
+  });
+  app.stage.addChild(muteBtn);
 
   // --- Title ---
   const title = createTitle(GAME_WIDTH, 140);
@@ -254,6 +285,7 @@ async function startGame() {
   async function triggerWin(groupA, groupB) {
     if (sorted) return;
     sorted = true;
+    play('process');
     clearPointer();
     // Disable further drag
     cards.forEach((c) => { c.eventMode = 'none'; c.cursor = 'default'; });
@@ -280,6 +312,7 @@ async function startGame() {
     // Phase D: Reveal bot hand + chip rain
     setTimeout(() => {
       revealBotHand(botCards, getBotHand());
+      play('coin', { concurrent: true });
       createChipRain(app, GAME_WIDTH, GAME_HEIGHT);
     }, 2700);
 
@@ -414,6 +447,8 @@ async function startGame() {
   function setupCardDrag(card) {
     card.on('pointerdown', (ev) => {
       if (sorted || draggingCard) return;
+      unlockAudio();
+      play('card');
       draggingCard = card;
       dragOriginalSlot = card._slotIdx;
       const pos = ev.global;

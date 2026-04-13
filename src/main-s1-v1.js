@@ -26,6 +26,10 @@ import { createTopBar, createTitle, createProgressSection, createTimer, updateTi
 import { createCTAOverlay } from './cta-overlay.js';
 import { createChipRain } from './chip-rain.js';
 import { openUrl } from './open-store.js';
+import { loadSounds, play, setMuted, isMuted, unlock as unlockAudio } from './sound.js';
+import sfxCardUrl from '../res/sound/s_card.mp3?url';
+import sfxCoinUrl from '../res/sound/s_coin_falling.mp3?url';
+import sfxProcessUrl from '../res/sound/s_process.mp3?url';
 
 // S1 cards: 7 hand + 1 cay_mo = 8 unique
 import card4clubs from '../res/common/composed/4_clubs.webp?url';
@@ -94,6 +98,33 @@ async function startGame() {
   topBar._storeUrl = STORE_URL;
   topBar.y = 40;
   app.stage.addChild(topBar);
+
+  await loadSounds({ card: sfxCardUrl, coin: sfxCoinUrl, process: sfxProcessUrl });
+
+  const muteBtn = new Container();
+  const muteBg = new Graphics();
+  muteBg.circle(0, 0, 22);
+  muteBg.fill({ color: 0x000000, alpha: 0.55 });
+  muteBg.stroke({ color: 0xffffff, width: 2, alpha: 0.8 });
+  muteBtn.addChild(muteBg);
+  const muteIcon = new Text({
+    text: '\uD83D\uDD0A',
+    style: { fontFamily: 'Arial', fontSize: 22, fill: '#ffffff' },
+  });
+  muteIcon.anchor.set(0.5);
+  muteBtn.addChild(muteIcon);
+  muteBtn.x = GAME_WIDTH - 35;
+  muteBtn.y = 110;
+  muteBtn.eventMode = 'static';
+  muteBtn.cursor = 'pointer';
+  muteBtn.on('pointerdown', (ev) => {
+    ev.stopPropagation?.();
+    unlockAudio();
+    const newState = !isMuted();
+    setMuted(newState);
+    muteIcon.text = newState ? '\uD83D\uDD07' : '\uD83D\uDD0A';
+  });
+  app.stage.addChild(muteBtn);
 
   // --- Title ---
   const title = createTitle(GAME_WIDTH, 140);
@@ -541,6 +572,8 @@ async function startGame() {
   function onCayMoTap() {
     if (resolved) return;
     if (phase !== 0) return;
+    unlockAudio();
+    play('card');
     phase = 1;
     cayMoCard.eventMode = 'none';
     title.text = 'Pick cards to meld with 5♣';
@@ -575,6 +608,7 @@ async function startGame() {
     // Valid pick → lift up + highlight, clear pointer on first valid pick
     pickedIdx.add(idx);
     if (pickedIdx.size === 1) clearPointer();
+    play('card');
     highlightCard(card, true);
     tweenTo(card, card.x, card.y - 24, 220);
 
@@ -592,6 +626,7 @@ async function startGame() {
 
   // --- Meld animation: 4♣ + 5♣ + 6♣ fly to player meld zone ---
   function triggerMeld() {
+    play('process');
     resolved = true;
     stopTimer();
     clearPointer();
@@ -689,7 +724,10 @@ async function startGame() {
     }, 600);
 
     // After 1700ms: chip rain
-    setTimeout(() => createChipRain(app, GAME_WIDTH, GAME_HEIGHT), 1700);
+    setTimeout(() => {
+      play('coin', { concurrent: true });
+      createChipRain(app, GAME_WIDTH, GAME_HEIGHT);
+    }, 1700);
 
     // After 5000ms: open store (CTA)
     setTimeout(() => openUrl(STORE_URL), 5000);

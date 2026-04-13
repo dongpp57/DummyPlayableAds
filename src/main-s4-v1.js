@@ -45,9 +45,8 @@ import { createChipRain } from './chip-rain.js';
 import { openUrl } from './open-store.js';
 import { loadSounds, play, setMuted, isMuted, unlock as unlockAudio } from './sound.js';
 
-// Sound assets
+// Sound assets (only import sounds actually used — saves ~23 KB per unused MP3)
 import sfxCardUrl from '../res/sound/s_card.mp3?url';
-import sfxDealUrl from '../res/sound/s_g_deal_card.mp3?url';
 import sfxCoinUrl from '../res/sound/s_coin_falling.mp3?url';
 import sfxProcessUrl from '../res/sound/s_process.mp3?url';
 
@@ -131,7 +130,6 @@ async function startGame() {
   // --- Load sound effects ---
   await loadSounds({
     card: sfxCardUrl,
-    deal: sfxDealUrl,
     coin: sfxCoinUrl,
     process: sfxProcessUrl,
   });
@@ -654,7 +652,7 @@ async function startGame() {
   meldButton.on('pointerdown', () => {
     if (!meldButton._enabled || resolved) return;
     unlockAudio();
-    play('card');
+    play('process'); // meld formation success
     runMeldFormation();
   });
 
@@ -662,7 +660,7 @@ async function startGame() {
   function onDiscardTap() {
     if (resolved || phase !== 1) return;
     unlockAudio();
-    play('card');
+    play('card'); // just a tap on a card
     phase = 1.25; // user must pick meld cards
     discardCard.eventMode = 'none';
     discardGlow.parent?.removeChild(discardGlow);
@@ -767,7 +765,7 @@ async function startGame() {
     clearPointer();
     setMeldButtonEnabled(meldButton, false);
     meldButton.visible = false;
-    play('deal'); // meld cards fly to table
+    play('card'); // card placement sound as meld cards land
 
     // Disable meld cards + clear highlight
     getMeldCards().forEach((c) => {
@@ -902,6 +900,7 @@ async function startGame() {
     clearPointer();
     card.eventMode = 'none';
     highlightCard(card, false);
+    play('process'); // lay off success — card placed on opponent meld
     const last = oppMeldCards[oppMeldCards.length - 1];
     const targetX = last.x + (MELD_SCALED_W - 12);
     const targetY = last.y;
@@ -955,7 +954,7 @@ async function startGame() {
     clearPointer();
 
     title.text = 'KNOCK!';
-    play('deal'); // whoosh as the last card flies out
+    play('card'); // card placement as last card discarded for knock
 
     // 8♠ flies down to discard pile (right side of open card A♦)
     const eightSpades = getDiscardHandCard();

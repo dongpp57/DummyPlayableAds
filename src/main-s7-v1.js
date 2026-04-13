@@ -36,6 +36,10 @@ registerCardTexture('4_spades',   card4spades);
 import { createTopBar, createTitle, createProgressSection, createTimer, updateTimerText, updateProgressFill, updateIQ } from './ui-header.js';
 import { createCTAOverlay } from './cta-overlay.js';
 import { openUrl } from './open-store.js';
+import { loadSounds, play, setMuted, isMuted, unlock as unlockAudio } from './sound.js';
+import sfxCardUrl from '../res/sound/s_card.mp3?url';
+import sfxCoinUrl from '../res/sound/s_coin_falling.mp3?url';
+import sfxProcessUrl from '../res/sound/s_process.mp3?url';
 
 const GAME_WIDTH = 640;
 const GAME_HEIGHT = 1136;
@@ -86,6 +90,33 @@ async function startGame() {
   topBar._storeUrl = STORE_URL;
   topBar.y = 40;
   app.stage.addChild(topBar);
+
+  await loadSounds({ card: sfxCardUrl, coin: sfxCoinUrl, process: sfxProcessUrl });
+
+  const muteBtn = new Container();
+  const muteBg = new Graphics();
+  muteBg.circle(0, 0, 22);
+  muteBg.fill({ color: 0x000000, alpha: 0.55 });
+  muteBg.stroke({ color: 0xffffff, width: 2, alpha: 0.8 });
+  muteBtn.addChild(muteBg);
+  const muteIcon = new Text({
+    text: '\uD83D\uDD0A',
+    style: { fontFamily: 'Arial', fontSize: 22, fill: '#ffffff' },
+  });
+  muteIcon.anchor.set(0.5);
+  muteBtn.addChild(muteIcon);
+  muteBtn.x = GAME_WIDTH - 35;
+  muteBtn.y = 110;
+  muteBtn.eventMode = 'static';
+  muteBtn.cursor = 'pointer';
+  muteBtn.on('pointerdown', (ev) => {
+    ev.stopPropagation?.();
+    unlockAudio();
+    const newState = !isMuted();
+    setMuted(newState);
+    muteIcon.text = newState ? '\uD83D\uDD07' : '\uD83D\uDD0A';
+  });
+  app.stage.addChild(muteBtn);
 
   // --- Title ---
   const title = createTitle(GAME_WIDTH, 140);
@@ -202,6 +233,7 @@ async function startGame() {
   }
 
   function placeCardInBox(card, boxKey) {
+    play('process');
     const box = targetBoxes[boxKey];
     const slotIdx = boxFilled[boxKey];
     const slot = box.slots[slotIdx];
@@ -272,6 +304,8 @@ async function startGame() {
 
     card.on('pointerdown', (ev) => {
       if (card._placed) return;
+      unlockAudio();
+      play('card');
       dragging = true;
       const pos = ev.global;
       offset.x = card.x - pos.x;
@@ -357,6 +391,7 @@ async function startGame() {
 }
 
 async function showRummyBanner(app) {
+  play('process');
   try {
     // Dark backdrop behind the banner so it pops out
     const bgTex = await Assets.load(rummyBgUrl);
