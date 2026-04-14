@@ -97,5 +97,21 @@ for (const id of LEGACY) {
   await buildSingle(indexFile, id);
 }
 
+// ========== Build music variants (v1-music for each base scenario) ==========
+const MUSIC_SCENARIOS = readdirSync('.')
+  .filter((f) => /^index-[\w-]+-v1-music\.html$/.test(f))
+  .map((f) => f.replace(/^index-/, '').replace(/\.html$/, ''));
+
+console.log(`\nFound ${MUSIC_SCENARIOS.length} music variants:`, MUSIC_SCENARIOS.join(', '));
+
+for (const id of MUSIC_SCENARIOS) {
+  const indexFile = `index-${id}.html`;
+  if (!existsSync(indexFile)) {
+    console.warn(`  ⚠ Skipping music ${id}: ${indexFile} not found`);
+    continue;
+  }
+  await buildSingle(indexFile, id);
+}
+
 const totalFiles = readdirSync(outDir).filter((f) => f.endsWith('.html')).length;
 console.log(`\nAll single-file builds complete! ${totalFiles} files in ${outDir}`);
