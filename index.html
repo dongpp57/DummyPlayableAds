@@ -296,6 +296,7 @@
     .badge-bet-v2 { background: rgba(74,144,217,0.15); color: var(--zps-accent-blue); border-color: rgba(74,144,217,0.35); }
     .badge-bet-v3 { background: rgba(245,166,35,0.15); color: var(--zps-brand-orange); border-color: rgba(245,166,35,0.35); }
     .badge-bet-v4 { background: linear-gradient(135deg, rgba(232,52,26,0.18), rgba(245,166,35,0.18)); color: var(--zps-brand-orange); border-color: rgba(232,52,26,0.4); font-weight: 800; }
+    .badge-bet-music { background: rgba(168,85,247,0.18); color: #a855f7; border-color: rgba(168,85,247,0.4); font-weight: 700; }
 
     /* ===== Bet filter tabs ===== */
     .filter-tabs {
@@ -479,11 +480,12 @@
     </div>
 
     <div class="filter-tabs" id="filterTabs">
-      <button class="filter-tab active" data-bet="all">All bets</button>
+      <button class="filter-tab active" data-bet="all">All</button>
       <button class="filter-tab" data-bet="v1">Low bet</button>
       <button class="filter-tab" data-bet="v2">Mid bet</button>
       <button class="filter-tab" data-bet="v3">High bet</button>
       <button class="filter-tab" data-bet="v4">VIP bet</button>
+      <button class="filter-tab" data-bet="music">Music</button>
     </div>
 
     <section class="pillar pillar-1">
@@ -578,20 +580,33 @@
       { variant: 'v4', label: 'VIP',  tabLabel: 'VIP Bet' },
     ];
 
-    // Expand each base scenario into 4 variants (one per bet level)
+    // Expand each base scenario into 4 bet variants + 1 music variant
     function expandPillar(baseItems) {
       const out = [];
       baseItems.forEach((base) => {
+        // 4 bet-level variants (no music)
         BET_LEVELS.forEach((bet) => {
           out.push({
             id: base.baseId + '-' + bet.variant,
             baseId: base.baseId,
             bet: bet.variant,
             betLabel: bet.label,
+            music: false,
             name: base.name,
             badge: base.badge,
             badgeText: base.badgeText,
           });
+        });
+        // 1 music variant (v1 background + BGM)
+        out.push({
+          id: base.baseId + '-v1-music',
+          baseId: base.baseId,
+          bet: 'music',
+          betLabel: 'MUSIC',
+          music: true,
+          name: base.name,
+          badge: base.badge,
+          badgeText: base.badgeText,
         });
       });
       return out;
