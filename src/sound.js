@@ -54,19 +54,47 @@ export function play(key, opts = {}) {
 export function unlock() {
   if (unlocked) return;
   unlocked = true;
-  // Touch every preloaded sound so the browser counts them as user-initiated
-  Object.values(sounds).forEach((a) => {
+  // Touch every preloaded sound so the browser counts them as user-initiated.
+  // Skip BGM — it will be started separately by playBgm() right after unlock.
+  Object.entries(sounds).forEach(([key, a]) => {
+    if (key === 'bgm') return; // don't touch-and-pause the BGM track
     try {
       a.play().then(() => { a.pause(); a.currentTime = 0; }).catch(() => {});
     } catch (_) {}
   });
 }
 
+/** Play a sound as looping background music at low volume. Returns stop function. */
+let activeBgm = null;
+export function playBgm(key, volume = 0.15) {
+  if (muted || !unlocked) return;
+  const base = sounds[key];
+  if (!base) return;
+  try {
+    base.loop = true;
+    base.volume = volume;
+    base.currentTime = 0;
+    base.play().catch(() => {});
+    activeBgm = base;
+  } catch (_) {}
+}
+
+export function stopBgm() {
+  if (activeBgm) {
+    try { activeBgm.pause(); activeBgm.currentTime = 0; } catch (_) {}
+    activeBgm = null;
+  }
+}
+
 export function setMuted(value) {
   muted = !!value;
   if (muted) {
-    // Stop anything currently playing
+    // Stop anything currently playing (SFX + BGM)
     Object.values(sounds).forEach((a) => { try { a.pause(); } catch (_) {} });
+    activeBgm = null;
+  } else if (activeBgm) {
+    // If BGM was playing when muted, don't auto-resume — user must re-trigger
+    activeBgm = null;
   }
 }
 
